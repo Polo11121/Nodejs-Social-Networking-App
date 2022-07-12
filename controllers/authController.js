@@ -58,7 +58,7 @@ exports.login = catchAsync(async (req, res, next) => {
   const user = await User.findOne({ email }).select('+password');
 
   if (!user || !(await user.correctPassword(password, user.password))) {
-    return next(new AppError('Incorrect email or password', 401));
+    return next(new AppError('Błędny login lub hasło', 401));
   }
 
   // 3) If everything ok, send token to client
@@ -133,7 +133,9 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   // 1) Get user based on POSTed email
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
-    return next(new AppError('There is no user with email address.', 404));
+    return next(
+      new AppError('Użytkownik z takim adresem e-mail nie istnieje.', 404)
+    );
   }
 
   // 2) Generate the random reset token
