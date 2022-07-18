@@ -37,12 +37,12 @@ const createSendToken = (user, statusCode, res) => {
 };
 
 exports.signup = catchAsync(async (req, res, next) => {
-  const newUser = await User.create({
-    name: req.body.name,
-    email: req.body.email,
-    password: req.body.password,
-    passwordConfirm: req.body.passwordConfirm
-  });
+  const user = await User.findOne({ email: req.body.email });
+
+  if (user) {
+    return next(new AppError('Ten adres e-mail jest już używany”.', 401));
+  }
+  const newUser = await User.create(req.body);
 
   createSendToken(newUser, 201, res);
 });
