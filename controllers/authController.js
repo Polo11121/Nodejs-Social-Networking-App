@@ -40,7 +40,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   const user = await User.findOne({ email: req.body.email });
 
   if (user) {
-    return next(new AppError('Ten adres e-mail jest już używany”.', 401));
+    return next(new AppError('Ten adres e-mail jest już używany', 401));
   }
   const newUser = await User.create(req.body);
 
@@ -58,7 +58,7 @@ exports.login = catchAsync(async (req, res, next) => {
   const user = await User.findOne({ email }).select('+password');
 
   if (!user || !(await user.correctPassword(password, user.password))) {
-    return next(new AppError('Błędny login lub hasło.', 401));
+    return next(new AppError('Błędny login lub hasło', 401));
   }
 
   // 3) If everything ok, send token to client
@@ -113,6 +113,8 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
 
   // GRANT ACCESS TO PROTECTED ROUTE
+
+  req.user = currentUser;
   next();
 });
 

@@ -19,10 +19,19 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     validate: [validator.isEmail, 'Please provide a valid email']
   },
-  photo: String,
+  profileImage: {
+    type: String,
+    default:
+      'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg'
+  },
+  backgroundImage: {
+    type: String,
+    default: ''
+  },
+  description: { type: String, default: '' },
   role: {
     type: String,
-    enum: ['user', 'guide', 'lead-guide', 'admin'],
+    enum: ['user', 'admin'],
     default: 'user'
   },
   password: {
