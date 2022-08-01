@@ -1,17 +1,10 @@
 const multer = require('multer');
+const sharp = require('sharp');
 const User = require('./../models/userModel');
 const catchAsync = require('./../utils/catchAsync');
 const AppError = require('./../utils/appError');
 
-const multerStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'public/img/users');
-  },
-  filename: (req, file, cb) => {
-    const ext = file.mimetype.split('/')[1];
-    cb(null, `user-${req.user.id}-${Date.now()}.${ext}`);
-  }
-});
+const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image')) {
@@ -24,9 +17,35 @@ const multerFilter = (req, file, cb) => {
 const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
 
 exports.uploadUserPhotos = upload.fields([
-  { name: 'profileImage', maxCount: 1 },
-  { name: 'backgroundImage', maxCount: 1 }
+  { name: 'profileImage' },
+  { name: 'backgroundImage' }
 ]);
+
+exports.resizeUserProfilePhotos = catchAsync(async (req, res, next) => {
+  if (req.files && req.files.profileImage) {
+    req.files.profileImage[0].filename = `user-profile-photo-${
+      req.user.id
+    }-${Date.now()}.jpeg`;
+
+    await sharp(req.files.profileImage[0].buffer)
+      .resize(500, 500)
+      .toFormat('jpeg')
+      .jpeg({ quality: 90 })
+      .toFile(`public/img/users/${req.files.profileImage[0].filename}`);
+  } else if (req.files && req.files.backgroundImage) {
+    req.files.backgroundImage[0].filename = `user-background-photo-${
+      req.user.id
+    }-${Date.now()}.jpeg`;
+
+    await sharp(req.files.backgroundImage[0].buffer)
+      .resize(500, 500)
+      .toFormat('jpeg')
+      .jpeg({ quality: 90 })
+      .toFile(`public/img/users/${req.files.backgroundImage[0].filename}`);
+  }
+
+  next();
+});
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -62,13 +81,13 @@ exports.updateMe = catchAsync(async (req, res, next) => {
 
   // 2) Filtered out unwanted fields names that are not allowed to be updated
   const filteredBody = filterObj(req.body, 'description', 'name', 'email');
-  if (req.files) {
-    if (req.files.profileImage) {
-      filteredBody.profileImage = req.files.profileImage[0].path;
-    }
-    if (req.files.backgroundImage) {
-      filteredBody.backgroundImage = req.files.backgroundImage[0].path;
-    }
+
+  const imagesPath = 'public/img/users/';
+
+  if (req.files && req.files.profileImage) {
+    filteredBody.profileImage = `${imagesPath}/${req.files.profileImage[0].filename}`;
+  } else if (req.files && req.files.backgroundImage) {
+    filteredBody.backgroundImage = `${imagesPath}/${req.files.backgroundImage[0].filename}`;
   }
 
   // 3) Update user document
@@ -95,10 +114,10 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 });
 
 exports.getUser = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).populate('posts');
 
   if (!user) {
-    return next(new AppError('No tour found with that ID', 404));
+    return next(new AppError('Nie znaleziono takiego użytkownika', 404));
   }
 
   res.status(200).json(user);
