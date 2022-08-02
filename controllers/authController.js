@@ -42,6 +42,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   if (user) {
     return next(new AppError('Ten adres e-mail jest już używany', 401));
   }
+
   const newUser = await User.create(req.body);
 
   createSendToken(newUser, 201, res);
@@ -52,7 +53,7 @@ exports.login = catchAsync(async (req, res, next) => {
 
   // 1) Check if email and password exist
   if (!email || !password) {
-    return next(new AppError('Please provide email and password!', 400));
+    return next(new AppError('Podaj login i hasło', 400));
   }
   // 2) Check if user exists && password is correct
   const user = await User.findOne({ email }).select('+password');

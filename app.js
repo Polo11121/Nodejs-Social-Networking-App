@@ -10,6 +10,7 @@ const cors = require('cors');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const userRouter = require('./routes/userRoutes');
+const postRouter = require('./routes/postRoutes');
 
 const app = express();
 
@@ -47,7 +48,7 @@ app.use(mongoSanitize());
 app.use(xss());
 
 // Serving static files
-app.use('*/public/img/users', express.static('public/img/users'));
+app.use('*/public/img/', express.static('public/img/'));
 
 // Test middleware
 app.use((req, res, next) => {
@@ -58,6 +59,7 @@ app.use((req, res, next) => {
 
 // 3) ROUTES
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/posts', postRouter);
 
 app.all('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

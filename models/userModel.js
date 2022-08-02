@@ -3,68 +3,83 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Please tell us your name']
-  },
-  surname: {
-    type: String,
-    required: [true, 'Please tell us your surname']
-  },
-  email: {
-    type: String,
-    required: [true, 'Please provide your email'],
-    unique: [true, 'siema'],
-    lowercase: true,
-    validate: [validator.isEmail, 'Please provide a valid email']
-  },
-  profileImage: {
-    type: String,
-    default:
-      'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg'
-  },
-  backgroundImage: {
-    type: String,
-    default: ''
-  },
-  description: { type: String, default: '' },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  password: {
-    type: String,
-    required: [true, 'Please provide a password'],
-    minlength: 8,
-    select: false
-  },
-  gender: {
-    required: [true, 'Please provide your gender'],
-    type: String,
-    enum: ['male', 'female']
-  },
-  birthDate: { required: [true, 'Please provide your birth date'], type: Date },
-  passwordConfirm: {
-    type: String,
-    required: [true, 'Please confirm your password'],
-    validate: {
-      // This only works on CREATE and SAVE!!!
-      validator: function(el) {
-        return el === this.password;
-      },
-      message: 'Passwords are not the same!'
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Please tell us your name']
+    },
+    surname: {
+      type: String,
+      required: [true, 'Please tell us your surname']
+    },
+    email: {
+      type: String,
+      required: [true, 'Please provide your email'],
+      unique: [true, 'siema'],
+      lowercase: true,
+      validate: [validator.isEmail, 'Please provide a valid email']
+    },
+    profileImage: {
+      type: String,
+      default:
+        'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg'
+    },
+    backgroundImage: {
+      type: String,
+      default: ''
+    },
+    description: { type: String, default: '' },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
+    password: {
+      type: String,
+      required: [true, 'Please provide a password'],
+      minlength: 8,
+      select: false
+    },
+    gender: {
+      required: [true, 'Please provide your gender'],
+      type: String,
+      enum: ['male', 'female']
+    },
+    birthDate: {
+      required: [true, 'Please provide your birth date'],
+      type: Date
+    },
+    passwordConfirm: {
+      type: String,
+      required: [true, 'Please confirm your password'],
+      validate: {
+        // This only works on CREATE and SAVE!!!
+        validator: function(el) {
+          return el === this.password;
+        },
+        message: 'Passwords are not the same!'
+      }
+    },
+    passwordChangedAt: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date,
+    active: {
+      type: Boolean,
+      default: true,
+      select: false
     }
   },
-  passwordChangedAt: Date,
-  passwordResetToken: String,
-  passwordResetExpires: Date,
-  active: {
-    type: Boolean,
-    default: true,
-    select: false
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
+);
+
+userSchema.virtual('posts', {
+  ref: 'Post',
+  foreignField: 'user',
+  localField: '_id'
 });
 
 userSchema.pre('save', async function(next) {
