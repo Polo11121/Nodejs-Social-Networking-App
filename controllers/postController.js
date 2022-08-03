@@ -19,7 +19,7 @@ const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
 exports.uploadPostPhotos = upload.array('images');
 
 exports.resizePostPhotos = catchAsync(async (req, res, next) => {
-  if (req.files) {
+  if (req.files.length) {
     req.body.images = [];
 
     await Promise.all(
@@ -29,17 +29,14 @@ exports.resizePostPhotos = catchAsync(async (req, res, next) => {
           1}.jpeg`;
 
         await sharp(file.buffer)
-          .resize(2000, 1333)
           .toFormat('jpeg')
-          .jpeg({ quality: 90 })
           .toFile(`${imagesPath}${filename}`);
 
         req.body.images.push(`${imagesPath}${filename}`);
       })
     );
-
-    next();
   }
+  next();
 });
 
 exports.getAllPosts = catchAsync(async (req, res, next) => {
@@ -75,5 +72,19 @@ exports.deletePost = catchAsync(async (req, res, next) => {
   res.status(204).json({
     status: 'success',
     data: null
+  });
+});
+
+exports.updatePost = catchAsync(async (req, res, next) => {
+  const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true
+  });
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      user: updatedPost
+    }
   });
 });

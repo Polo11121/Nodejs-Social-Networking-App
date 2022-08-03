@@ -17,6 +17,13 @@ router
 
 router
   .route('/:id')
+  .patch(
+    authController.protect,
+    authController.restrictTo('user'),
+    postController.uploadPostPhotos,
+    postController.resizePostPhotos,
+    postController.updatePost
+  )
   .delete(
     authController.protect,
     authController.restrictTo('user'),

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const postSchema = new mongoose.Schema(
   {
     description: String,
-    images: [String],
+    images: { type: [String], default: [] },
     createdAt: {
       type: Date,
       default: Date.now

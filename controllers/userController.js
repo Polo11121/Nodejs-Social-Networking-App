@@ -28,9 +28,7 @@ exports.resizeUserProfilePhotos = catchAsync(async (req, res, next) => {
     }-${Date.now()}.jpeg`;
 
     await sharp(req.files.profileImage[0].buffer)
-      .resize(500, 500)
       .toFormat('jpeg')
-      .jpeg({ quality: 90 })
       .toFile(`public/img/users/${req.files.profileImage[0].filename}`);
   } else if (req.files && req.files.backgroundImage) {
     req.files.backgroundImage[0].filename = `user-background-photo-${
@@ -38,9 +36,7 @@ exports.resizeUserProfilePhotos = catchAsync(async (req, res, next) => {
     }-${Date.now()}.jpeg`;
 
     await sharp(req.files.backgroundImage[0].buffer)
-      .resize(500, 500)
       .toFormat('jpeg')
-      .jpeg({ quality: 90 })
       .toFile(`public/img/users/${req.files.backgroundImage[0].filename}`);
   }
 
