@@ -3,6 +3,7 @@ const sharp = require('sharp');
 const User = require('./../models/userModel');
 const catchAsync = require('./../utils/catchAsync');
 const AppError = require('./../utils/appError');
+const Post = require('./../models/postModel');
 
 const multerStorage = multer.memoryStorage();
 
@@ -79,11 +80,23 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   const filteredBody = filterObj(req.body, 'description', 'name', 'email');
 
   const imagesPath = 'public/img/users/';
-
+  console.log(req.user.id);
   if (req.files && req.files.profileImage) {
     filteredBody.profileImage = `${imagesPath}/${req.files.profileImage[0].filename}`;
+    await Post.create({
+      type: 'profile',
+      user: req.user.id,
+      images: [filteredBody.profileImage],
+      description: 'Zaktualizowano zdjęcie profilowe'
+    });
   } else if (req.files && req.files.backgroundImage) {
     filteredBody.backgroundImage = `${imagesPath}/${req.files.backgroundImage[0].filename}`;
+    await Post.create({
+      type: 'background',
+      user: req.user.id,
+      images: [filteredBody.backgroundImage],
+      description: 'Zaktualizowano zdjęcie w tle'
+    });
   }
 
   // 3) Update user document
