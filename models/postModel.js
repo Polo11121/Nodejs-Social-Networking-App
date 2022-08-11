@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const postSchema = new mongoose.Schema(
   {
+    type: {
+      default: 'post',
+      type: String,
+      enum: ['post', 'background', 'profile']
+    },
     description: String,
     images: { type: [String], default: [] },
     createdAt: {
