@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const socketio = require('socket.io');
 
 process.on('uncaughtException', err => {
   console.log('UNCAUGHT EXCEPTION! 💥 Shutting down...');
@@ -34,5 +35,19 @@ process.on('unhandledRejection', err => {
   console.log(err.name, err.message);
   server.close(() => {
     process.exit(1);
+  });
+});
+
+const io = socketio(server);
+const onlineUsers = new Map();
+io.on('connection', socket => {
+  socket.on('add-user', userId => onlineUsers.set(userId, socket.id));
+
+  socket.on('send-msg', data => {
+    const sendUserSocket = onlineUsers.get(data.receiver);
+
+    if (sendUserSocket) {
+      socket.to(sendUserSocket).emit('msg-receive', data.sender);
+    }
   });
 });

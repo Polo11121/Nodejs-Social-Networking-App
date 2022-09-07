@@ -1,7 +1,8 @@
 class APIFeatures {
-  constructor(query, queryString) {
+  constructor(query, queryString, results) {
     this.query = query;
     this.queryString = queryString;
+    this.hasNextPage = this.queryString.page * this.queryString.limit < results;
   }
 
   filter() {
