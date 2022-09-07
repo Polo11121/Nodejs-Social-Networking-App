@@ -13,6 +13,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please tell us your surname']
     },
+    contactEmail: {
+      type: String,
+      default: ''
+    },
     email: {
       type: String,
       required: [true, 'Please provide your email'],
@@ -20,6 +24,8 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       validate: [validator.isEmail, 'Please provide a valid email']
     },
+    address: { default: '', type: String },
+    phoneNumber: { default: '', type: String, maxLength: 8 },
     profileImage: {
       type: String,
       default:
@@ -41,11 +47,26 @@ const userSchema = new mongoose.Schema(
       minlength: 8,
       select: false
     },
+    interestedGenders: {
+      type: String,
+      default: '',
+      enum: ['males', 'females', 'femalesAndMales', '']
+    },
     gender: {
       required: [true, 'Please provide your gender'],
       type: String,
       enum: ['male', 'female']
     },
+    hobbies: {
+      type: [{ text: String, icon: String }],
+      default: []
+    },
+    workPlace: { type: String, default: '' },
+    middleSchool: { type: String, default: '' },
+    upperSchool: { type: String, default: '' },
+    home: { type: String, default: '' },
+    childCity: { type: String, default: '' },
+    cities: { type: [String], default: [''] },
     birthDate: {
       required: [true, 'Please provide your birth date'],
       type: Date
