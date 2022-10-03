@@ -123,7 +123,7 @@ exports.getAllMessages = catchAsync(async (req, res) => {
   res.status(200).json({ status: 'success', hasNextPage, data: messages });
 });
 
-exports.getUnreadMessages = catchAsync(async (req, res => {
+exports.getUnreadMessages = catchAsync(async (req, res) => {
   const unreadMessages = await Message.countDocuments({
     $and: [{ receiver: req.user.id }, { receiverRead: { $ne: true } }]
   });
