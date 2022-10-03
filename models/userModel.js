@@ -13,10 +13,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please tell us your surname']
     },
-    contactEmail: {
-      type: String,
-      default: ''
-    },
     email: {
       type: String,
       required: [true, 'Please provide your email'],
@@ -24,8 +20,11 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       validate: [validator.isEmail, 'Please provide a valid email']
     },
-    address: { default: '', type: String },
-    phoneNumber: { default: '', type: String, maxLength: 8 },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
     profileImage: {
       type: String,
       default:
@@ -36,17 +35,12 @@ const userSchema = new mongoose.Schema(
       default: ''
     },
     description: { type: String, default: '' },
-    role: {
+    contactEmail: {
       type: String,
-      enum: ['user', 'admin'],
-      default: 'user'
+      default: ''
     },
-    password: {
-      type: String,
-      required: [true, 'Please provide a password'],
-      minlength: 8,
-      select: false
-    },
+    address: { default: '', type: String },
+    phoneNumber: { default: '', type: String, maxLength: 8 },
     interestedGenders: {
       type: String,
       default: '',
@@ -64,12 +58,41 @@ const userSchema = new mongoose.Schema(
     workPlace: { type: String, default: '' },
     middleSchool: { type: String, default: '' },
     upperSchool: { type: String, default: '' },
-    home: { type: String, default: '' },
-    childCity: { type: String, default: '' },
-    cities: { type: [String], default: [''] },
+    home: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'City',
+      required: false
+    },
+    childCity: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'City',
+      required: false
+    },
+    cities: {
+      type: [mongoose.Schema.ObjectId],
+      ref: 'City',
+      required: false,
+      default: []
+    },
     birthDate: {
       required: [true, 'Please provide your birth date'],
       type: Date
+    },
+    filters: {
+      interestedGenders: String,
+      interestedAge: String,
+      interestedCityMaxDistance: {
+        type: String,
+        enum: ['0', '10', '50', '100', '200', '300']
+      },
+      interestedCity: { type: mongoose.Schema.ObjectId, ref: 'City' },
+      required: false
+    },
+    password: {
+      type: String,
+      required: [true, 'Please provide a password'],
+      minlength: 8,
+      select: false
     },
     passwordConfirm: {
       type: String,
@@ -104,27 +127,29 @@ userSchema.virtual('posts', {
 });
 
 userSchema.pre('save', async function(next) {
-  // Only run this function if password was actually modified
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password')) {
+    return next();
+  }
 
-  // Hash the password with cost of 12
   this.password = await bcrypt.hash(this.password, 12);
-
-  // Delete passwordConfirm field
   this.passwordConfirm = undefined;
+
   next();
 });
 
 userSchema.pre('save', function(next) {
-  if (!this.isModified('password') || this.isNew) return next();
+  if (!this.isModified('password') || this.isNew) {
+    return next();
+  }
 
   this.passwordChangedAt = Date.now() - 1000;
+
   next();
 });
 
 userSchema.pre(/^find/, function(next) {
-  // this points to the current query
   this.find({ active: { $ne: false } });
+
   next();
 });
 
@@ -145,7 +170,6 @@ userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
     return JWTTimestamp < changedTimestamp;
   }
 
-  // False means NOT changed
   return false;
 };
 
@@ -156,8 +180,6 @@ userSchema.methods.createPasswordResetToken = function() {
     .createHash('sha256')
     .update(resetToken)
     .digest('hex');
-
-  console.log({ resetToken }, this.passwordResetToken);
 
   this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
 

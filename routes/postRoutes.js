@@ -4,12 +4,11 @@ const authController = require('./../controllers/authController');
 
 const router = express.Router();
 
+router.use(authController.protect, authController.restrictTo('user'));
+
 router
   .route('/')
-  .get(postController.getAllPosts)
   .post(
-    authController.protect,
-    authController.restrictTo('user'),
     postController.uploadPostPhotos,
     postController.resizePostPhotos,
     postController.addPost
@@ -18,16 +17,10 @@ router
 router
   .route('/:id')
   .patch(
-    authController.protect,
-    authController.restrictTo('user'),
     postController.uploadPostPhotos,
     postController.resizePostPhotos,
     postController.updatePost
   )
-  .delete(
-    authController.protect,
-    authController.restrictTo('user'),
-    postController.deletePost
-  );
+  .delete(postController.deletePost);
 
 module.exports = router;
