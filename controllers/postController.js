@@ -2,6 +2,7 @@ const multer = require('multer');
 const sharp = require('sharp');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('./../utils/appError');
+
 const Post = require('./../models/postModel');
 
 const multerStorage = multer.memoryStorage();
@@ -39,26 +40,12 @@ exports.resizePostPhotos = catchAsync(async (req, res, next) => {
   next();
 });
 
-exports.getAllPosts = catchAsync(async (req, res, next) => {
-  const posts = await Post.find();
-
-  res.status(200).json({
-    status: 'success',
-    results: posts.length,
-    data: {
-      posts
-    }
-  });
-});
-
-exports.addPost = catchAsync(async (req, res, next) => {
-  const newPosts = await Post.create(req.body);
+exports.addPost = catchAsync(async (req, res) => {
+  const newPost = await Post.create(req.body);
 
   res.status(201).json({
     status: 'success',
-    data: {
-      newPosts
-    }
+    data: newPost
   });
 });
 
@@ -66,7 +53,7 @@ exports.deletePost = catchAsync(async (req, res, next) => {
   const post = await Post.findByIdAndDelete(req.params.id);
 
   if (!post) {
-    return next(new AppError('No tour post with that ID', 404));
+    return next(new AppError('No post with that ID', 404));
   }
 
   res.status(204).json({
@@ -75,7 +62,7 @@ exports.deletePost = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.updatePost = catchAsync(async (req, res, next) => {
+exports.updatePost = catchAsync(async (req, res) => {
   const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true
@@ -83,8 +70,6 @@ exports.updatePost = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    data: {
-      user: updatedPost
-    }
+    data: updatedPost
   });
 });

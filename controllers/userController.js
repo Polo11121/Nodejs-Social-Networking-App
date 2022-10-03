@@ -1,8 +1,9 @@
 const multer = require('multer');
 const sharp = require('sharp');
-const User = require('./../models/userModel');
 const catchAsync = require('./../utils/catchAsync');
 const AppError = require('./../utils/appError');
+
+const User = require('./../models/userModel');
 const Post = require('./../models/postModel');
 
 const multerStorage = multer.memoryStorage();
@@ -49,24 +50,11 @@ const filterObj = (obj, ...allowedFields) => {
   Object.keys(obj).forEach(el => {
     if (allowedFields.includes(el)) newObj[el] = obj[el];
   });
+
   return newObj;
 };
 
-exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await User.find();
-
-  // SEND RESPONSE
-  res.status(200).json({
-    status: 'success',
-    results: users.length,
-    data: {
-      users
-    }
-  });
-});
-
 exports.updateMe = catchAsync(async (req, res, next) => {
-  // 1) Create error if user POSTs password data
   if (req.body.password || req.body.passwordConfirm) {
     return next(
       new AppError(
@@ -76,8 +64,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
     );
   }
 
-  // 2) Filtered out unwanted fields names that are not allowed to be updated
-  const filteredBody = filterObj(
+  const interestedBody = filterObj(
     req.body,
     'interestedGenders',
     'birthDate',
@@ -89,47 +76,52 @@ exports.updateMe = catchAsync(async (req, res, next) => {
     'middleSchool',
     'upperSchool',
     'home',
+    'gender',
     'phoneNumber',
     'childCity',
     'cities',
-    'address'
+    'address',
+    'filters'
   );
 
   const imagesPath = 'public/img/users/';
-  console.log(req.user.id);
+
   if (req.files && req.files.profileImage) {
-    filteredBody.profileImage = `${imagesPath}/${req.files.profileImage[0].filename}`;
+    interestedBody.profileImage = `${imagesPath}/${req.files.profileImage[0].filename}`;
+
     await Post.create({
       type: 'profile',
       user: req.user.id,
-      images: [filteredBody.profileImage],
+      images: [interestedBody.profileImage],
       description: 'Zaktualizowano zdjęcie profilowe'
     });
   } else if (req.files && req.files.backgroundImage) {
-    filteredBody.backgroundImage = `${imagesPath}/${req.files.backgroundImage[0].filename}`;
+    interestedBody.backgroundImage = `${imagesPath}/${req.files.backgroundImage[0].filename}`;
+
     await Post.create({
       type: 'background',
       user: req.user.id,
-      images: [filteredBody.backgroundImage],
+      images: [interestedBody.backgroundImage],
       description: 'Zaktualizowano zdjęcie w tle'
     });
   }
 
-  // 3) Update user document
-  const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
-    new: true,
-    runValidators: true
-  });
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user.id,
+    interestedBody,
+    {
+      new: true,
+      runValidators: true
+    }
+  );
 
   res.status(200).json({
     status: 'success',
-    data: {
-      user: updatedUser
-    }
+    data: updatedUser
   });
 });
 
-exports.deleteMe = catchAsync(async (req, res, next) => {
+exports.deleteMe = catchAsync(async (req, res) => {
   await User.findByIdAndUpdate(req.user.id, { active: false });
 
   res.status(204).json({
@@ -139,32 +131,31 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 });
 
 exports.getUser = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.params.id).populate('posts');
+  const user = await User.findById(req.params.id, { __v: 0, id: 0 })
+    .populate({
+      path: 'filters.interestedCity',
+      select: 'city location'
+    })
+    .populate({
+      path: 'home',
+      select: 'city location'
+    })
+    .populate({
+      path: 'childCity',
+      select: 'city'
+    })
+    .populate({
+      path: 'cities',
+      select: 'city'
+    })
+    .populate({ path: 'posts', options: { sort: { createdAt: -1 } } });
 
   if (!user) {
     return next(new AppError('Nie znaleziono takiego użytkownika', 404));
   }
 
-  res.status(200).json(user);
+  res.status(200).json({
+    status: 'success',
+    data: user
+  });
 });
-
-exports.createUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'This route is not yet defined!'
-  });
-};
-
-exports.updateUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'This route is not yet defined!'
-  });
-};
-
-exports.deleteUser = (req, res) => {
-  res.status(500).json({
-    status: 'error',
-    message: 'This route is not yet defined!'
-  });
-};

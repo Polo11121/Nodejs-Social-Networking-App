@@ -1,9 +1,11 @@
 const multer = require('multer');
 const sharp = require('sharp');
 const catchAsync = require('../utils/catchAsync');
-const Message = require('./../models/messageModel');
 const AppError = require('./../utils/appError');
 const APIFeatures = require('./../utils/apiFeatures');
+
+const Message = require('./../models/messageModel');
+const Match = require('./../models/matchModel');
 
 const multerStorage = multer.memoryStorage();
 
@@ -40,10 +42,77 @@ exports.resizeMessagePhotos = catchAsync(async (req, res, next) => {
   next();
 });
 
-exports.getAllMessages = catchAsync(async (req, res, next) => {
-  const query = Message.find({
-    users: { $all: [req.user.id, req.params.id] }
-  }).sort({ updatedAt: -1 });
+exports.getLastMessages = catchAsync(async (req, res) => {
+  const matches = await Match.find(
+    {
+      users: { $in: [req.user.id] }
+    },
+    { statuses: { $elemMatch: { user: { $ne: req.user.id } } } }
+  )
+    .populate({
+      path: 'statuses.user',
+      select: 'name surname profileImage'
+    })
+    .map(async match => {
+      const lastMessage = await Message.findOne(
+        {
+          users: {
+            $all: [
+              req.user.id.toString(),
+              match[0].statuses[0].user._id.toString()
+            ]
+          }
+        },
+        { sender: 1, text: 1, createdAt: 1 }
+      )
+        .populate({
+          path: 'sender',
+          select: 'name surname profileImage'
+        })
+        .sort({ createdAt: -1 });
+
+      return [
+        { _id: match[0]._id, match: match[0].statuses[0].user, lastMessage }
+      ];
+    });
+
+  res.status(200).json({
+    status: 'success',
+    data: matches
+  });
+});
+
+exports.getAllMessages = catchAsync(async (req, res) => {
+  await Message.updateMany(
+    {
+      $and: [
+        { users: { $all: [req.user.id, req.params.id] } },
+        { receiver: req.user.id },
+        { receiverRead: { $ne: true } }
+      ]
+    },
+    {
+      $set: {
+        receiverRead: true
+      }
+    }
+  );
+
+  const query = Message.find(
+    {
+      users: { $all: [req.user.id, req.params.id] }
+    },
+    { receiverRead: 0, updatedAt: 0, __v: 0 }
+  )
+    .populate({
+      path: 'receiver',
+      select: 'name surname profileImage'
+    })
+    .populate({
+      path: 'sender',
+      select: 'name surname profileImage'
+    })
+    .sort({ createdAt: -1 });
 
   const results = (await query).length;
   const features = new APIFeatures(query, req.query, results).paginate();
@@ -51,10 +120,18 @@ exports.getAllMessages = catchAsync(async (req, res, next) => {
   const messages = await features.query;
   const { hasNextPage } = features;
 
-  res.status(200).json({ hasNextPage, data: messages });
+  res.status(200).json({ status: 'success', hasNextPage, data: messages });
 });
 
-exports.addMessage = catchAsync(async (req, res, next) => {
+exports.getUnreadMessages = catchAsync(async (req, res => {
+  const unreadMessages = await Message.countDocuments({
+    $and: [{ receiver: req.user.id }, { receiverRead: { $ne: true } }]
+  });
+
+  res.status(200).json({ status: 'success', data: unreadMessages });
+});
+
+exports.addMessage = catchAsync(async (req, res) => {
   const newMessage = await Message.create({
     text: req.body.text,
     sender: req.user.id,
@@ -65,8 +142,6 @@ exports.addMessage = catchAsync(async (req, res, next) => {
 
   res.status(201).json({
     status: 'success',
-    data: {
-      newMessage
-    }
+    data: newMessage
   });
 });
