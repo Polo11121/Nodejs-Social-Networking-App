@@ -105,6 +105,18 @@ const userSchema = new mongoose.Schema(
         message: 'Passwords are not the same!'
       }
     },
+    matchStatus: {
+      type: [
+        {
+          user: { type: mongoose.Schema.ObjectId, ref: 'User' },
+          status: {
+            type: String,
+            enum: ['left', 'right', 'match', 'request', 'reject', 'none']
+          }
+        }
+      ],
+      required: false
+    },
     passwordChangedAt: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,

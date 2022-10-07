@@ -12,6 +12,6 @@ router.get('/matchingUsers', matchController.getMatchingUsers);
 
 router.get('/newMatches', matchController.getNewMatches);
 
-router.patch('/swipe', matchController.swipe);
+router.put('/match', matchController.match);
 
 module.exports = router;

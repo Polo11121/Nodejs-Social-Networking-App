@@ -54,26 +54,28 @@ exports.getLastMessages = catchAsync(async (req, res) => {
       select: 'name surname profileImage'
     })
     .map(async match => {
-      const lastMessage = await Message.findOne(
-        {
-          users: {
-            $all: [
-              req.user.id.toString(),
-              match[0].statuses[0].user._id.toString()
-            ]
-          }
-        },
-        { sender: 1, text: 1, createdAt: 1 }
-      )
-        .populate({
-          path: 'sender',
-          select: 'name surname profileImage'
-        })
-        .sort({ createdAt: -1 });
+      const lastMessage =
+        match.length &&
+        (await Message.findOne(
+          {
+            users: {
+              $all: [
+                req.user.id.toString(),
+                match[0].statuses[0].user._id.toString()
+              ]
+            }
+          },
+          { sender: 1, text: 1, createdAt: 1, receiverRead: 1 }
+        )
+          .populate({
+            path: 'sender',
+            select: 'name surname profileImage'
+          })
+          .sort({ createdAt: -1 }));
 
-      return [
-        { _id: match[0]._id, match: match[0].statuses[0].user, lastMessage }
-      ];
+      return match.length
+        ? [{ _id: match[0]._id, match: match[0].statuses[0].user, lastMessage }]
+        : [];
     });
 
   res.status(200).json({

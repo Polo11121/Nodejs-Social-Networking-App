@@ -138,7 +138,7 @@ exports.getNewMatches = catchAsync(async (req, res) => {
   });
 });
 
-exports.swipe = catchAsync(async (req, res) => {
+exports.match = catchAsync(async (req, res) => {
   const match = await Match.findOne({
     $and: [
       {
@@ -158,12 +158,46 @@ exports.swipe = catchAsync(async (req, res) => {
     ]
   });
 
-  const isMatch =
+  const userStatus =
     match &&
     match.statuses.find(
       ({ user }) => user.toString() !== req.user.id.toString()
-    ).status === 'right' &&
-    req.body.status === 'right';
+    ).status;
+    
+  const isMatch =
+    (userStatus === 'request' && req.body.status === 'request') ||
+    (userStatus === 'right' && req.body.status === 'right');
+
+  const updateMatch = () => {
+    if (isMatch) {
+      return {
+        'statuses.$[elem].status': 'match',
+        'statuses.$[elem2].status': 'match',
+        'statuses.$[elem].new': 'true',
+        'statuses.$[elem2].new': 'true',
+        users: [req.user.id, req.body.userId]
+      };
+    }
+    if (req.body.status === 'reject') {
+      return {
+        'statuses.$[elem].status': 'reject',
+        'statuses.$[elem2].status': 'none',
+        'statuses.$[elem].new': 'false',
+        'statuses.$[elem2].new': 'false',
+        users: []
+      };
+    }
+    if (req.body.status === 'request') {
+      return {
+        'statuses.$[elem].status': req.body.status,
+        'statuses.$[elem2].new': 'true'
+      };
+    }
+
+    return {
+      'statuses.$[elem].status': req.body.status
+    };
+  };
 
   if (match) {
     await Match.updateOne(
@@ -186,13 +220,7 @@ exports.swipe = catchAsync(async (req, res) => {
         ]
       },
       {
-        $set: isMatch
-          ? {
-              'statuses.$[elem].status': 'match',
-              'statuses.$[elem2].status': 'match',
-              users: [req.user.id, req.body.userId]
-            }
-          : { 'statuses.$[elem].status': req.body.status }
+        $set: updateMatch()
       },
       {
         arrayFilters: [
