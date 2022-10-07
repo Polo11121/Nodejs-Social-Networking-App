@@ -46,7 +46,67 @@ io.on('connection', socket => {
 });
 
 Match.watch().on('change', data => {
-  console.log(data.updateDescription);
+  if (
+    data.operationType === 'update' &&
+    data.updateDescription.updatedFields.statuses.some(
+      ({ status }) => status === 'request'
+    )
+  ) {
+    const { statuses } = data.updateDescription.updatedFields;
+
+    const userId = statuses
+      .find(({ status }) => status === 'none')
+      .user.toString();
+
+    const sendUserSocket = onlineUsers.get(userId);
+
+    if (sendUserSocket) {
+      io.to(sendUserSocket).emit('match-status', {
+        text: 'Masz nowa prośbę o dopasowanie',
+        users: statuses.map(({ user }) => user)
+      });
+    }
+  }
+
+  if (
+    data.operationType === 'update' &&
+    data.updateDescription.updatedFields.statuses.some(
+      ({ status }) => status === 'reject'
+    )
+  ) {
+    const users = data.updateDescription.updatedFields.statuses.map(
+      ({ user }) => user
+    );
+
+    users.forEach(user => {
+      const sendUserSocket = onlineUsers.get(user.toString());
+
+      if (sendUserSocket) {
+        io.to(sendUserSocket).emit('match-status', { users });
+      }
+    });
+  }
+
+  if (
+    data.operationType === 'insert' &&
+    data.fullDocument.statuses.some(({ status }) => status === 'request')
+  ) {
+    const { statuses } = data.fullDocument;
+    
+    const userId = statuses
+      .find(({ status }) => status === 'none')
+      .user.toString();
+
+    const sendUserSocket = onlineUsers.get(userId);
+
+    if (sendUserSocket) {
+      io.to(sendUserSocket).emit('match-status', {
+        text: 'Masz nowa prośbę o dopasowanie',
+        users: statuses.map(({ user }) => user)
+      });
+    }
+  }
+
   if (
     data.operationType === 'update' &&
     data.updateDescription.updatedFields.users
@@ -57,21 +117,25 @@ Match.watch().on('change', data => {
       const sendUserSocket = onlineUsers.get(user.toString());
 
       if (sendUserSocket) {
-        io.to(sendUserSocket).emit('new-match', {});
+        io.to(sendUserSocket).emit('match-status', {
+          text: 'Masz nowe dopasowanie',
+          users
+        });
       }
     });
   }
 });
 
 Message.watch().on('change', data => {
-  if (data.operationType === 'update') {
+  if (data.operationType === 'insert') {
     const sendUserSocket = onlineUsers.get(
       data.fullDocument.receiver.toString()
     );
 
     if (sendUserSocket) {
       io.to(sendUserSocket).emit('msg-receive', {
-        sender: data.fullDocument.sender
+        sender: data.fullDocument.sender,
+        text: 'Masz nowa wiadomość'
       });
     }
   }

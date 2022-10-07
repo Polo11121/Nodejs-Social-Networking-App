@@ -5,6 +5,7 @@ const AppError = require('./../utils/appError');
 
 const User = require('./../models/userModel');
 const Post = require('./../models/postModel');
+const Match = require('./../models/matchModel');
 
 const multerStorage = multer.memoryStorage();
 
@@ -154,8 +155,62 @@ exports.getUser = catchAsync(async (req, res, next) => {
     return next(new AppError('Nie znaleziono takiego użytkownika', 404));
   }
 
+  let matchStatus;
+
+  if (req.params.id !== req.user.id) {
+    const match = await Match.findOne({
+      $and: [
+        {
+          statuses: {
+            $elemMatch: {
+              user: req.user.id
+            }
+          }
+        },
+        {
+          statuses: {
+            $elemMatch: {
+              user: req.params.id
+            }
+          }
+        }
+      ]
+    });
+
+    matchStatus = match
+      ? match.statuses.map(({ status, user: matchUser }) => ({
+          status,
+          user: matchUser
+        }))
+      : undefined;
+  }
+
+  user.matchStatus = matchStatus;
+
   res.status(200).json({
     status: 'success',
     data: user
+  });
+});
+
+exports.getAllUser = catchAsync(async (req, res, next) => {
+  const users = await User.find(
+    {
+      $and: [
+        {
+          $or: [
+            { name: { $regex: req.query.searchTerm, $options: 'i' } },
+            { surname: { $regex: req.query.searchTerm, $options: 'i' } }
+          ]
+        },
+        { _id: { $ne: req.user.id } }
+      ]
+    },
+    { name: 1, surname: 1, profileImage: 1 }
+  ).limit(5);
+
+  res.status(200).json({
+    status: 'success',
+    data: users
   });
 });
