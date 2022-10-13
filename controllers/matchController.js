@@ -94,31 +94,68 @@ exports.getMatchingUsers = catchAsync(async (req, res) => {
 });
 
 exports.getMatches = catchAsync(async (req, res) => {
+  const findQuery = {
+    $or: [
+      { users: { $in: [req.user.id] } },
+      {
+        $and: [
+          {
+            statuses: {
+              $elemMatch: {
+                user: req.user.id,
+                status: 'none'
+              }
+            }
+          },
+          {
+            statuses: {
+              $elemMatch: {
+                user: { $ne: req.user.id },
+                status: { $ne: 'reject' }
+              }
+            }
+          }
+        ]
+      },
+      {
+        statuses: {
+          $elemMatch: {
+            user: req.user.id,
+            status: 'request'
+          }
+        }
+      }
+    ]
+  };
   await Match.updateMany(
-    {
-      users: { $in: [req.user.id] }
-    },
+    findQuery,
     { $set: { 'statuses.$[elem].new': false } },
     { arrayFilters: [{ 'elem.user': req.user.id }] }
   );
 
-  const matches = await Match.find(
-    {
-      users: { $in: [req.user.id] }
-    },
-    { statuses: { $elemMatch: { user: { $ne: req.user.id } } } }
-  )
-    .populate({
-      path: 'statuses.user',
-      select: 'name surname profileImage'
-    })
-    .map(async match => [
-      { _id: match[0]._id, match: match[0].statuses[0].user }
-    ]);
+  const matches = await Match.find(findQuery, {
+    statuses: { $elemMatch: { user: { $ne: req.user.id } } }
+  }).populate({
+    path: 'statuses.user',
+    select: 'name surname profileImage'
+  });
+
+  const allMatches = await matches.map(match => ({
+    _id: match._id,
+    match: match.statuses[0].user,
+    status: match.statuses[0].status
+  }));
 
   res.status(200).json({
     status: 'success',
-    data: matches
+    data: {
+      matches: allMatches,
+      allCount: allMatches.length,
+      receiveCount: allMatches.filter(({ status }) => status === 'request')
+        .length,
+      sendCount: allMatches.filter(({ status }) => status === 'none').length,
+      matchCount: allMatches.filter(({ status }) => status === 'match').length
+    }
   });
 });
 
@@ -163,7 +200,7 @@ exports.match = catchAsync(async (req, res) => {
     match.statuses.find(
       ({ user }) => user.toString() !== req.user.id.toString()
     ).status;
-    
+
   const isMatch =
     (userStatus === 'request' && req.body.status === 'request') ||
     (userStatus === 'right' && req.body.status === 'right');
@@ -232,7 +269,7 @@ exports.match = catchAsync(async (req, res) => {
   } else {
     await Match.create({
       statuses: [
-        { user: req.user, status: req.body.status },
+        { user: req.user, status: req.body.status, new: false },
         { user: req.body.userId }
       ]
     });

@@ -48,39 +48,43 @@ exports.getLastMessages = catchAsync(async (req, res) => {
       users: { $in: [req.user.id] }
     },
     { statuses: { $elemMatch: { user: { $ne: req.user.id } } } }
-  )
-    .populate({
-      path: 'statuses.user',
-      select: 'name surname profileImage'
-    })
-    .map(async match => {
-      const lastMessage =
-        match.length &&
-        (await Message.findOne(
-          {
-            users: {
-              $all: [
-                req.user.id.toString(),
-                match[0].statuses[0].user._id.toString()
-              ]
-            }
-          },
-          { sender: 1, text: 1, createdAt: 1, receiverRead: 1 }
-        )
-          .populate({
-            path: 'sender',
-            select: 'name surname profileImage'
-          })
-          .sort({ createdAt: -1 }));
+  ).populate({
+    path: 'statuses.user',
+    select: 'name surname profileImage'
+  });
 
-      return match.length
-        ? [{ _id: match[0]._id, match: match[0].statuses[0].user, lastMessage }]
-        : [];
-    });
+  const lastMessages = await Promise.all(
+    matches.map(async match => {
+      const message = await Message.findOne(
+        {
+          users: {
+            $all: [
+              req.user.id.toString(),
+              match.statuses[0].user._id.toString()
+            ]
+          }
+        },
+        { sender: 1, text: 1, createdAt: 1, receiverRead: 1 }
+      )
+        .populate({
+          path: 'sender',
+          select: 'name surname profileImage'
+        })
+        .sort({ createdAt: -1 });
+
+      return message;
+    })
+  );
+
+  const matchesWithLastMessage = matches.map((match, index) => ({
+    _id: match._id,
+    match: match.statuses[0].user,
+    lastMessage: lastMessages[index]
+  }));
 
   res.status(200).json({
     status: 'success',
-    data: matches
+    data: matchesWithLastMessage
   });
 });
 

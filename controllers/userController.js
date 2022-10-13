@@ -182,7 +182,10 @@ exports.getUser = catchAsync(async (req, res, next) => {
           status,
           user: matchUser
         }))
-      : undefined;
+      : [
+          { status: 'none', user: req.params.id },
+          { status: 'none', user: req.user.id }
+        ];
   }
 
   user.matchStatus = matchStatus;

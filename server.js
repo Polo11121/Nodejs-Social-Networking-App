@@ -48,28 +48,28 @@ io.on('connection', socket => {
 Match.watch().on('change', data => {
   if (
     data.operationType === 'update' &&
+    data.updateDescription.updatedFields.statuses &&
     data.updateDescription.updatedFields.statuses.some(
       ({ status }) => status === 'request'
     )
   ) {
     const { statuses } = data.updateDescription.updatedFields;
 
-    const userId = statuses
-      .find(({ status }) => status === 'none')
-      .user.toString();
+    statuses.forEach(({ user, status }) => {
+      const sendUserSocket = onlineUsers.get(user.toString());
 
-    const sendUserSocket = onlineUsers.get(userId);
-
-    if (sendUserSocket) {
-      io.to(sendUserSocket).emit('match-status', {
-        text: 'Masz nowa prośbę o dopasowanie',
-        users: statuses.map(({ user }) => user)
-      });
-    }
+      if (sendUserSocket) {
+        io.to(sendUserSocket).emit('match-status', {
+          text: status === 'none' && 'Masz nowa prośbę o dopasowanie',
+          users: statuses.map(({ user: matchUser }) => matchUser)
+        });
+      }
+    });
   }
 
   if (
     data.operationType === 'update' &&
+    data.updateDescription.updatedFields.statuses &&
     data.updateDescription.updatedFields.statuses.some(
       ({ status }) => status === 'reject'
     )
@@ -92,19 +92,17 @@ Match.watch().on('change', data => {
     data.fullDocument.statuses.some(({ status }) => status === 'request')
   ) {
     const { statuses } = data.fullDocument;
-    
-    const userId = statuses
-      .find(({ status }) => status === 'none')
-      .user.toString();
 
-    const sendUserSocket = onlineUsers.get(userId);
+    statuses.forEach(({ user, status }) => {
+      const sendUserSocket = onlineUsers.get(user.toString());
 
-    if (sendUserSocket) {
-      io.to(sendUserSocket).emit('match-status', {
-        text: 'Masz nowa prośbę o dopasowanie',
-        users: statuses.map(({ user }) => user)
-      });
-    }
+      if (sendUserSocket) {
+        io.to(sendUserSocket).emit('match-status', {
+          text: status === 'none' && 'Masz nowa prośbę o dopasowanie',
+          users: statuses.map(({ user: matchUser }) => matchUser)
+        });
+      }
+    });
   }
 
   if (
