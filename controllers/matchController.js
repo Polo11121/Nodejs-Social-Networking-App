@@ -7,7 +7,7 @@ const City = require('./../models/cityModel');
 const User = require('./../models/userModel');
 const Match = require('./../models/matchModel');
 
-exports.getMatchingUsers = catchAsync(async (req, res) => {
+exports.getSuggestions = catchAsync(async (req, res) => {
   const {
     interestedGenders,
     interestedAge,
@@ -17,20 +17,22 @@ exports.getMatchingUsers = catchAsync(async (req, res) => {
 
   const ageRange = interestedAge && interestedAge.split('-');
 
-  const swipedUsers = await Match.find({
-    statuses: {
-      $elemMatch: {
-        user: req.user.id,
-        status: { $ne: 'none' }
+  const swipedUsers = await Match.find(
+    {
+      statuses: {
+        $elemMatch: {
+          user: req.user.id
+        }
       }
+    },
+    {
+      statuses: { $elemMatch: { user: { $ne: req.user.id } } }
     }
-  });
-
-  const swipedUsersIds = (swipedUsers || []).map(
-    ({ statuses }) =>
-      statuses.find(({ user }) => user.toString() !== req.user.id.toString())
-        .user
   );
+
+  const swipedUsersIds = swipedUsers.length
+    ? swipedUsers.map(({ statuses }) => statuses[0].user)
+    : [];
 
   const cities = interestedCity
     ? await City.find(
@@ -50,8 +52,8 @@ exports.getMatchingUsers = catchAsync(async (req, res) => {
     : [];
 
   const citiesIds = cities.map(({ _id }) => ObjectId(_id));
-
-  const user = await User.find(
+  console.log(citiesIds);
+  const users = await User.find(
     {
       $and: [
         ...[
@@ -59,37 +61,40 @@ exports.getMatchingUsers = catchAsync(async (req, res) => {
             ? { _id: { $nin: swipedUsersIds } }
             : { _id: { $exists: true } }
         ],
-        { _id: { $ne: req.user.id } },
-        ...[
-          interestedGenders && interestedGenders !== 'femalesAndMales'
-            ? { gender: interestedGenders.slice(0, -1) }
-            : { gender: { $exists: true } }
-        ],
-        ...[
-          interestedAge
-            ? {
-                birthDate: {
-                  $gte: subtractYears(ageRange[1]),
-                  $lte: subtractYears(ageRange[0])
-                }
-              }
-            : { birthDate: { $exists: true } }
-        ],
-        ...[
-          citiesIds
-            ? {
-                home: { $in: citiesIds }
-              }
-            : { home: { $exists: true } }
-        ]
+        { _id: { $ne: req.user.id } }
+        // ...[
+        //   interestedGenders && interestedGenders !== 'femalesAndMales'
+        //     ? { gender: interestedGenders.slice(0, -1) }
+        //     : { gender: { $exists: true } }
+        // ],
+        // ...[
+        //   interestedAge
+        //     ? {
+        //         birthDate: {
+        //           $gte: subtractYears(ageRange[1]),
+        //           $lte: subtractYears(ageRange[0])
+        //         }
+        //       }
+        //     : { birthDate: { $exists: true } }
+        // ],
+        // ...[
+        //   citiesIds
+        //     ? {
+        //         home: { $in: citiesIds }
+        //       }
+        //     : { home: { $exists: true } }
+        // ]
       ]
     },
-    { name: 1, surname: 1 }
-  ).limit(1);
+    { name: 1, surname: 1, birthDate: 1, profileImage: 1, home: 1 }
+  ).populate({
+    path: 'home',
+    select: 'city location'
+  });
 
   res.status(200).json({
     status: 'success',
-    data: user[0]
+    data: users
   });
 });
 
