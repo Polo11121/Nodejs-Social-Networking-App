@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const socketio = require('socket.io');
+
 const Message = require('./models/messageModel');
 const Match = require('./models/matchModel');
+const User = require('./models/userModel');
 
 process.on('uncaughtException', err => {
   console.log('UNCAUGHT EXCEPTION! 💥 Shutting down...');
@@ -11,6 +13,7 @@ process.on('uncaughtException', err => {
 });
 
 dotenv.config({ path: './config.env' });
+
 const app = require('./app');
 
 const DB = process.env.DATABASE.replace(
@@ -45,95 +48,72 @@ io.on('connection', socket => {
   socket.on('add-user', userId => onlineUsers.set(userId, socket.id));
 });
 
-Match.watch().on('change', data => {
+Match.watch().on('change', async data => {
   if (
-    data.operationType === 'update' &&
-    data.updateDescription.updatedFields.statuses &&
-    data.updateDescription.updatedFields.statuses.some(
-      ({ status }) => status === 'request'
+    !(
+      data.operationType === 'update' &&
+      data.updateDescription.updatedFields &&
+      Object.keys(data.updateDescription.updatedFields)[0].endsWith('new')
     )
   ) {
-    const { statuses } = data.updateDescription.updatedFields;
+    const match = await Match.findById(data.documentKey._id);
 
-    statuses.forEach(({ user, status }) => {
-      const sendUserSocket = onlineUsers.get(user.toString());
+    if (
+      !match.statuses.some(
+        ({ status }) => status === 'left' || status === 'right'
+      )
+    ) {
+      const message = id => {
+        if (match.statuses.every(({ status }) => status === 'match')) {
+          return 'Masz nowe dopasowanie';
+        }
 
-      if (sendUserSocket) {
-        io.to(sendUserSocket).emit('match-status', {
-          text: status === 'none' && 'Masz nowa prośbę o dopasowanie',
-          users: statuses.map(({ user: matchUser }) => matchUser)
-        });
-      }
-    });
-  }
+        if (
+          match.statuses.some(({ status }) => status === 'request') &&
+          match.statuses.find(({ user }) => user === id).status === 'none'
+        ) {
+          return 'Masz nowa prośbę o dopasowanie';
+        }
 
-  if (
-    data.operationType === 'update' &&
-    data.updateDescription.updatedFields.statuses &&
-    data.updateDescription.updatedFields.statuses.some(
-      ({ status }) => status === 'reject'
-    )
-  ) {
-    const users = data.updateDescription.updatedFields.statuses.map(
-      ({ user }) => user
-    );
+        return '';
+      };
 
-    users.forEach(user => {
-      const sendUserSocket = onlineUsers.get(user.toString());
+      match.statuses.forEach(({ user }) => {
+        const sendUserSocket = onlineUsers.get(user.toString());
 
-      if (sendUserSocket) {
-        io.to(sendUserSocket).emit('match-status', { users });
-      }
-    });
-  }
-
-  if (
-    data.operationType === 'insert' &&
-    data.fullDocument.statuses.some(({ status }) => status === 'request')
-  ) {
-    const { statuses } = data.fullDocument;
-
-    statuses.forEach(({ user, status }) => {
-      const sendUserSocket = onlineUsers.get(user.toString());
-
-      if (sendUserSocket) {
-        io.to(sendUserSocket).emit('match-status', {
-          text: status === 'none' && 'Masz nowa prośbę o dopasowanie',
-          users: statuses.map(({ user: matchUser }) => matchUser)
-        });
-      }
-    });
-  }
-
-  if (
-    data.operationType === 'update' &&
-    data.updateDescription.updatedFields.users
-  ) {
-    const { users } = data.updateDescription.updatedFields;
-
-    users.forEach(user => {
-      const sendUserSocket = onlineUsers.get(user.toString());
-
-      if (sendUserSocket) {
-        io.to(sendUserSocket).emit('match-status', {
-          text: 'Masz nowe dopasowanie',
-          users
-        });
-      }
-    });
+        if (sendUserSocket) {
+          io.to(sendUserSocket).emit('match-status', {
+            text: message(user),
+            users: match.statuses.map(({ user: matchUser }) => matchUser)
+          });
+        }
+      });
+    }
   }
 });
 
-Message.watch().on('change', data => {
+Message.watch().on('change', async data => {
   if (data.operationType === 'insert') {
     const sendUserSocket = onlineUsers.get(
       data.fullDocument.receiver.toString()
     );
 
+    const { name, surname } = await User.findById(data.fullDocument.sender);
+
+    const unreadMessages = await Message.countDocuments({
+      $and: [
+        { sender: data.fullDocument.sender },
+        { reciver: data.fullDocument.reciver },
+        { receiverRead: { $ne: true } }
+      ]
+    });
+
     if (sendUserSocket) {
       io.to(sendUserSocket).emit('msg-receive', {
         sender: data.fullDocument.sender,
-        text: 'Masz nowa wiadomość'
+        text: `${name} ${surname} wysyła ci wiadomość ${
+          unreadMessages > 1 ? `(${unreadMessages})` : ''
+        }`
       });
     }
   }

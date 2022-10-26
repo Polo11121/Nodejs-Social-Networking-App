@@ -13,7 +13,7 @@ const multerFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image')) {
     cb(null, true);
   } else {
-    cb(new AppError('Not an image! Please upload only images.', 400), false);
+    cb(new AppError('Proszę przesłać zdjęcie!', 400), false);
   }
 };
 
@@ -45,7 +45,7 @@ exports.resizeMessagePhotos = catchAsync(async (req, res, next) => {
 exports.getLastMessages = catchAsync(async (req, res) => {
   const matches = await Match.find(
     {
-      users: { $in: [req.user.id] }
+      $and: [{ users: { $in: [req.user.id] } }, { active: true }]
     },
     { statuses: { $elemMatch: { user: { $ne: req.user.id } } } }
   ).populate({

@@ -13,7 +13,7 @@ const multerFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image')) {
     cb(null, true);
   } else {
-    cb(new AppError('Not an image! Please upload only images.', 400), false);
+    cb(new AppError('Proszę przesłać zdjęcie!', 400), false);
   }
 };
 
@@ -55,16 +55,7 @@ const filterObj = (obj, ...allowedFields) => {
   return newObj;
 };
 
-exports.updateMe = catchAsync(async (req, res, next) => {
-  if (req.body.password || req.body.passwordConfirm) {
-    return next(
-      new AppError(
-        'This route is not for password updates. Please use /updateMyPassword.',
-        400
-      )
-    );
-  }
-
+exports.updateUser = catchAsync(async (req, res, next) => {
   const interestedBody = filterObj(
     req.body,
     'interestedGenders',
@@ -122,8 +113,19 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.deleteMe = catchAsync(async (req, res) => {
+exports.deleteUser = catchAsync(async (req, res) => {
   await User.findByIdAndUpdate(req.user.id, { active: false });
+
+  await Match.updateMany(
+    {
+      statuses: {
+        $elemMatch: {
+          user: req.user.id
+        }
+      }
+    },
+    { $set: { active: false } }
+  );
 
   res.status(204).json({
     status: 'success',
@@ -132,7 +134,19 @@ exports.deleteMe = catchAsync(async (req, res) => {
 });
 
 exports.getUser = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.params.id, { __v: 0, id: 0 })
+  const user = await User.findOne(
+    {
+      $and: [
+        { _id: req.params.id },
+        { active: { $eq: true } },
+        { accountConfirmed: { $eq: true } }
+      ]
+    },
+    {
+      __v: 0,
+      id: 0
+    }
+  )
     .populate({
       path: 'filters.interestedCity',
       select: 'city location'
@@ -196,10 +210,12 @@ exports.getUser = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.getAllUser = catchAsync(async (req, res, next) => {
+exports.getUsers = catchAsync(async (req, res, next) => {
   const users = await User.find(
     {
       $and: [
+        { active: { $eq: true } },
+        { accountConfirmed: { $eq: true } },
         {
           $or: [
             { name: { $regex: req.query.searchTerm, $options: 'i' } },

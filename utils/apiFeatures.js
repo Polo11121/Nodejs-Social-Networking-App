@@ -3,6 +3,7 @@ class APIFeatures {
     this.query = query;
     this.queryString = queryString;
     this.hasNextPage = this.queryString.page * this.queryString.limit < results;
+    this.results = results;
   }
 
   filter() {
@@ -48,7 +49,7 @@ class APIFeatures {
     const limit = this.queryString.limit * 1 || 100;
     const skip = (page - 1) * limit;
 
-    this.query = this.query.skip(skip).limit(limit);
+    this.query = this.query.skip(skip > this.results ? 0 : skip).limit(limit);
 
     return this;
   }

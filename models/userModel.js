@@ -3,6 +3,16 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
 
+const pointSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['Point']
+  },
+  coordinates: {
+    type: [Number]
+  }
+});
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -40,7 +50,7 @@ const userSchema = new mongoose.Schema(
       default: ''
     },
     address: { default: '', type: String },
-    phoneNumber: { default: '', type: String, maxLength: 8 },
+    phoneNumber: { default: '', type: String, maxLength: 9 },
     interestedGenders: {
       type: String,
       default: '',
@@ -78,6 +88,18 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Please provide your birth date'],
       type: Date
     },
+    matchStatus: {
+      type: [
+        {
+          user: { type: mongoose.Schema.ObjectId, ref: 'User' },
+          status: {
+            type: String,
+            enum: ['left', 'right', 'match', 'request', 'reject', 'none']
+          }
+        }
+      ],
+      required: false
+    },
     filters: {
       interestedGenders: String,
       interestedAge: String,
@@ -98,39 +120,41 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please confirm your password'],
       validate: {
-        // This only works on CREATE and SAVE!!!
         validator: function(el) {
           return el === this.password;
         },
         message: 'Passwords are not the same!'
       }
     },
-    matchStatus: {
-      type: [
-        {
-          user: { type: mongoose.Schema.ObjectId, ref: 'User' },
-          status: {
-            type: String,
-            enum: ['left', 'right', 'match', 'request', 'reject', 'none']
-          }
-        }
-      ],
-      required: false
-    },
-    passwordChangedAt: Date,
-    passwordResetToken: String,
-    passwordResetExpires: Date,
     active: {
       type: Boolean,
       default: true,
       select: false
-    }
+    },
+    accountConfirmed: {
+      type: Boolean,
+      default: false,
+      select: false
+    },
+    accountConfirmedToken: { type: String, select: false },
+    passwordChangedAt: { type: Date, select: false },
+    passwordResetToken: { type: String, select: false },
+    passwordResetExpires: { type: Date, select: false },
+    emailResetToken: { type: String, select: false },
+    emailResetExpires: { type: Date, select: false },
+    newEmail: {
+      type: String,
+      select: false
+    },
+    random_point: { type: pointSchema, index: '2dsphere', select: false }
   },
   {
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
   }
 );
+
+userSchema.index({ random_point: '2dsphere' });
 
 userSchema.virtual('posts', {
   ref: 'Post',
@@ -194,6 +218,19 @@ userSchema.methods.createPasswordResetToken = function() {
     .digest('hex');
 
   this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
+
+  return resetToken;
+};
+
+userSchema.methods.createEmailResetToken = function() {
+  const resetToken = crypto.randomBytes(32).toString('hex');
+
+  this.emailResetToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+
+  this.emailResetExpires = Date.now() + 10 * 60 * 1000;
 
   return resetToken;
 };

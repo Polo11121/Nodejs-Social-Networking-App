@@ -11,7 +11,7 @@ const multerFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image')) {
     cb(null, true);
   } else {
-    cb(new AppError('Not an image! Please upload only images.', 400), false);
+    cb(new AppError('Proszę przesłać zdjęcie!', 400), false);
   }
 };
 
@@ -53,7 +53,7 @@ exports.deletePost = catchAsync(async (req, res, next) => {
   const post = await Post.findByIdAndDelete(req.params.id);
 
   if (!post) {
-    return next(new AppError('No post with that ID', 404));
+    return next(new AppError('Nie znaleziono takiego posta', 404));
   }
 
   res.status(204).json({
