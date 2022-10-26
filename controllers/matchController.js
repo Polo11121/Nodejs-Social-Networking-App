@@ -7,12 +7,16 @@ const City = require('./../models/cityModel');
 const User = require('./../models/userModel');
 const Match = require('./../models/matchModel');
 
-exports.getSuggestions = catchAsync(async (req, res) => {
+const APIFeatures = require('./../utils/apiFeatures');
+
+exports.getUsers = catchAsync(async (req, res) => {
   const {
     interestedGenders,
     interestedAge,
     interestedCity,
-    interestedCityMaxDistance
+    interestedCityMaxDistance,
+    randomSeed,
+    isSwipe
   } = req.query;
 
   const ageRange = interestedAge && interestedAge.split('-');
@@ -21,7 +25,8 @@ exports.getSuggestions = catchAsync(async (req, res) => {
     {
       statuses: {
         $elemMatch: {
-          user: req.user.id
+          user: req.user.id,
+          status: { $ne: 'none' }
         }
       }
     },
@@ -43,7 +48,7 @@ exports.getSuggestions = catchAsync(async (req, res) => {
                 type: 'Point',
                 coordinates: JSON.parse(interestedCity)
               },
-              $maxDistance: interestedCityMaxDistance * 10000
+              $maxDistance: (interestedCityMaxDistance || 0) * 1000
             }
           }
         },
@@ -52,63 +57,107 @@ exports.getSuggestions = catchAsync(async (req, res) => {
     : [];
 
   const citiesIds = cities.map(({ _id }) => ObjectId(_id));
-  console.log(citiesIds);
-  const users = await User.find(
+
+  const filterQuery = () => {
+    const filters = [
+      { _id: { $ne: req.user.id } },
+      {
+        random_point: {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [randomSeed, 0]
+            }
+          }
+        }
+      },
+      { active: { $eq: true } },
+      { accountConfirmed: { $eq: true } }
+    ];
+
+    if (swipedUsersIds.length) {
+      filters.push({ _id: { $nin: swipedUsersIds } });
+    }
+
+    if (interestedGenders && interestedGenders !== 'femalesAndMales') {
+      filters.push({ gender: interestedGenders.slice(0, -1) });
+    }
+
+    if (interestedAge) {
+      filters.push({
+        birthDate: {
+          $gte: subtractYears(ageRange[1]),
+          $lte: subtractYears(ageRange[0])
+        }
+      });
+    }
+
+    if (citiesIds.length) {
+      filters.push({ home: { $in: citiesIds } });
+    }
+
+    return filters;
+  };
+
+  const query = User.find(
     {
-      $and: [
-        ...[
-          swipedUsersIds
-            ? { _id: { $nin: swipedUsersIds } }
-            : { _id: { $exists: true } }
-        ],
-        { _id: { $ne: req.user.id } }
-        // ...[
-        //   interestedGenders && interestedGenders !== 'femalesAndMales'
-        //     ? { gender: interestedGenders.slice(0, -1) }
-        //     : { gender: { $exists: true } }
-        // ],
-        // ...[
-        //   interestedAge
-        //     ? {
-        //         birthDate: {
-        //           $gte: subtractYears(ageRange[1]),
-        //           $lte: subtractYears(ageRange[0])
-        //         }
-        //       }
-        //     : { birthDate: { $exists: true } }
-        // ],
-        // ...[
-        //   citiesIds
-        //     ? {
-        //         home: { $in: citiesIds }
-        //       }
-        //     : { home: { $exists: true } }
-        // ]
-      ]
+      $and: filterQuery()
     },
-    { name: 1, surname: 1, birthDate: 1, profileImage: 1, home: 1 }
+    isSwipe
+      ? {
+          name: 1,
+          birthDate: 1,
+          profileImage: 1,
+          home: 1,
+          description: 1,
+          hobbies: 1
+        }
+      : { name: 1, surname: 1, birthDate: 1, profileImage: 1, home: 1 }
   ).populate({
     path: 'home',
     select: 'city location'
   });
 
+  const results = (await query).length;
+  const features = new APIFeatures(query, req.query, results).paginate();
+
+  const users = await features.query;
+
+  const { hasNextPage } = await features;
+
   res.status(200).json({
     status: 'success',
-    data: users
+    data: users,
+    results,
+    hasNextPage
   });
 });
 
 exports.getMatches = catchAsync(async (req, res) => {
   const findQuery = {
     $or: [
-      { users: { $in: [req.user.id] } },
+      { $and: [{ users: { $in: [req.user.id] } }, { active: true }] },
       {
         $and: [
+          { active: true },
           {
             statuses: {
               $elemMatch: {
                 user: req.user.id,
-                status: 'none'
+                status: 'request'
+              }
+            }
+          }
+        ]
+      },
+      {
+        $and: [
+          { active: true },
+          {
+            statuses: {
+              $elemMatch: {
+                user: req.user.id,
+                status: { $regex: /(.*?)/ }
               }
             }
           },
@@ -116,19 +165,11 @@ exports.getMatches = catchAsync(async (req, res) => {
             statuses: {
               $elemMatch: {
                 user: { $ne: req.user.id },
-                status: { $ne: 'reject' }
+                status: 'request'
               }
             }
           }
         ]
-      },
-      {
-        statuses: {
-          $elemMatch: {
-            user: req.user.id,
-            status: 'request'
-          }
-        }
       }
     ]
   };
@@ -206,9 +247,11 @@ exports.match = catchAsync(async (req, res) => {
       ({ user }) => user.toString() !== req.user.id.toString()
     ).status;
 
+  const matchStatuses = ['request', 'right'];
+
   const isMatch =
-    (userStatus === 'request' && req.body.status === 'request') ||
-    (userStatus === 'right' && req.body.status === 'right');
+    matchStatuses.include(userStatus) &&
+    matchStatuses.includes(req.body.status);
 
   const updateMatch = () => {
     if (isMatch) {
@@ -220,6 +263,7 @@ exports.match = catchAsync(async (req, res) => {
         users: [req.user.id, req.body.userId]
       };
     }
+
     if (req.body.status === 'reject') {
       return {
         'statuses.$[elem].status': 'reject',
@@ -229,6 +273,7 @@ exports.match = catchAsync(async (req, res) => {
         users: []
       };
     }
+
     if (req.body.status === 'request') {
       return {
         'statuses.$[elem].status': req.body.status,
@@ -237,7 +282,9 @@ exports.match = catchAsync(async (req, res) => {
     }
 
     return {
-      'statuses.$[elem].status': req.body.status
+      'statuses.$[elem].status': req.body.status,
+      'statuses.$[elem].new': 'false',
+      'statuses.$[elem2].new': 'false'
     };
   };
 

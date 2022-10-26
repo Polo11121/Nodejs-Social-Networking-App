@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const matchSchema = new mongoose.Schema(
   {
+    active: { type: Boolean, default: true },
     statuses: [
       {
         user: { type: mongoose.Schema.ObjectId, ref: 'User' },
@@ -10,7 +11,7 @@ const matchSchema = new mongoose.Schema(
           enum: ['left', 'right', 'match', 'request', 'reject', 'none'],
           default: 'none'
         },
-        new: { type: Boolean, default: true }
+        new: { type: Boolean, default: false }
       }
     ],
     users: [{ type: mongoose.Schema.ObjectId, ref: 'User', default: [] }]

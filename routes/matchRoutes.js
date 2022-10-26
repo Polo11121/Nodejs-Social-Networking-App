@@ -8,7 +8,7 @@ router.use(authController.protect, authController.restrictTo('user'));
 
 router.get('/', matchController.getMatches);
 
-router.get('/suggestions', matchController.getSuggestions);
+router.get('/users', matchController.getUsers);
 
 router.get('/newMatches', matchController.getNewMatches);
 
