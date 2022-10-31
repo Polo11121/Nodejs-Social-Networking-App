@@ -62,6 +62,8 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     'birthDate',
     'description',
     'name',
+    'surname',
+    'contactEmail',
     'email',
     'hobbies',
     'workPlace',
@@ -211,6 +213,8 @@ exports.getUser = catchAsync(async (req, res, next) => {
 });
 
 exports.getUsers = catchAsync(async (req, res, next) => {
+  const splittedSearchTerm = req.query.searchTerm.split(' ');
+
   const users = await User.find(
     {
       $and: [
@@ -218,8 +222,24 @@ exports.getUsers = catchAsync(async (req, res, next) => {
         { accountConfirmed: { $eq: true } },
         {
           $or: [
-            { name: { $regex: req.query.searchTerm, $options: 'i' } },
-            { surname: { $regex: req.query.searchTerm, $options: 'i' } }
+            {
+              name: {
+                $regex:
+                  splittedSearchTerm.length === 2
+                    ? splittedSearchTerm[0]
+                    : req.query.searchTerm,
+                $options: 'i'
+              }
+            },
+            {
+              surname: {
+                $regex:
+                  splittedSearchTerm.length === 2
+                    ? splittedSearchTerm[1]
+                    : req.query.searchTerm,
+                $options: 'i'
+              }
+            }
           ]
         },
         { _id: { $ne: req.user.id } }

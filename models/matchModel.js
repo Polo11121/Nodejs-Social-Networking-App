@@ -11,7 +11,7 @@ const matchSchema = new mongoose.Schema(
           enum: ['left', 'right', 'match', 'request', 'reject', 'none'],
           default: 'none'
         },
-        new: { type: Boolean, default: false }
+        new: { type: Boolean, default: true }
       }
     ],
     users: [{ type: mongoose.Schema.ObjectId, ref: 'User', default: [] }]
