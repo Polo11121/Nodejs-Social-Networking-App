@@ -250,8 +250,9 @@ exports.match = catchAsync(async (req, res) => {
   const matchStatuses = ['request', 'right'];
 
   const isMatch =
-    matchStatuses.include(userStatus) &&
+    matchStatuses.includes(userStatus) &&
     matchStatuses.includes(req.body.status);
+  console.log(req.body.status === 'request');
 
   const updateMatch = () => {
     if (isMatch) {
@@ -275,12 +276,13 @@ exports.match = catchAsync(async (req, res) => {
     }
 
     if (req.body.status === 'request') {
+      console.log('eLO');
       return {
         'statuses.$[elem].status': req.body.status,
         'statuses.$[elem2].new': 'true'
       };
     }
-
+    console.log('eLO2');
     return {
       'statuses.$[elem].status': req.body.status,
       'statuses.$[elem].new': 'false',
