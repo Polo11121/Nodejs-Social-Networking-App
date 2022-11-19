@@ -1,13 +1,14 @@
 const multer = require('multer');
 const sharp = require('sharp');
+
+const multerStorage = multer.memoryStorage();
 const catchAsync = require('../utils/catchAsync');
-const AppError = require('./../utils/appError');
-const APIFeatures = require('./../utils/apiFeatures');
 
 const Message = require('./../models/messageModel');
 const Match = require('./../models/matchModel');
 
-const multerStorage = multer.memoryStorage();
+const AppError = require('./../utils/appError');
+const APIFeatures = require('./../utils/apiFeatures');
 
 const multerFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image')) {

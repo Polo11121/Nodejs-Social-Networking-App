@@ -1,5 +1,3 @@
-// eslint-disable-next-line
-const ObjectId = require('mongodb').ObjectId;
 const catchAsync = require('./../utils/catchAsync');
 const subtractYears = require('./../utils/functions');
 
@@ -7,6 +5,8 @@ const City = require('./../models/cityModel');
 const User = require('./../models/userModel');
 const Match = require('./../models/matchModel');
 
+// eslint-disable-next-line
+const ObjectId = require('mongodb').ObjectId;
 const APIFeatures = require('./../utils/apiFeatures');
 
 exports.getUsers = catchAsync(async (req, res) => {
@@ -23,12 +23,24 @@ exports.getUsers = catchAsync(async (req, res) => {
 
   const swipedUsers = await Match.find(
     {
-      statuses: {
-        $elemMatch: {
-          user: req.user.id,
-          status: { $ne: 'none' }
+      $or: [
+        {
+          statuses: {
+            $elemMatch: {
+              user: req.user.id,
+              status: { $ne: 'none' }
+            }
+          }
+        },
+        {
+          statuses: {
+            $elemMatch: {
+              user: { $ne: req.user.id },
+              status: 'reject'
+            }
+          }
         }
-      }
+      ]
     },
     {
       statuses: { $elemMatch: { user: { $ne: req.user.id } } }
@@ -71,8 +83,7 @@ exports.getUsers = catchAsync(async (req, res) => {
           }
         }
       },
-      { active: { $eq: true } },
-      { accountConfirmed: { $eq: true } }
+      { status: 'active' }
     ];
 
     if (swipedUsersIds.length) {
@@ -252,7 +263,6 @@ exports.match = catchAsync(async (req, res) => {
   const isMatch =
     matchStatuses.includes(userStatus) &&
     matchStatuses.includes(req.body.status);
-  console.log(req.body.status === 'request');
 
   const updateMatch = () => {
     if (isMatch) {
@@ -276,13 +286,11 @@ exports.match = catchAsync(async (req, res) => {
     }
 
     if (req.body.status === 'request') {
-      console.log('eLO');
       return {
         'statuses.$[elem].status': req.body.status,
         'statuses.$[elem2].new': 'true'
       };
     }
-    console.log('eLO2');
     return {
       'statuses.$[elem].status': req.body.status,
       'statuses.$[elem].new': 'false',
@@ -324,7 +332,10 @@ exports.match = catchAsync(async (req, res) => {
     await Match.create({
       statuses: [
         { user: req.user, status: req.body.status, new: false },
-        { user: req.body.userId }
+        {
+          user: req.body.userId,
+          new: req.body.status === 'request'
+        }
       ]
     });
   }

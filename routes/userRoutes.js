@@ -13,10 +13,18 @@ router.patch('/confirmEmail/:token', authController.confirmEmail);
 router.post('/forgotPassword', authController.forgotPassword);
 router.patch('/resetPassword/:token', authController.resetPassword);
 
+router.get(
+  '/:id',
+  authController.protect,
+  authController.restrictTo('user', 'admin'),
+  userController.getUser
+);
+
 router.use(authController.protect, authController.restrictTo('user'));
 
 router.patch('/updatePassword', authController.updatePassword);
 router.patch('/changeEmail', authController.changeEmail);
+router.patch('/deleteUser', authController.deleteUser);
 
 router.patch(
   '/updateUser',
@@ -25,10 +33,6 @@ router.patch(
   userController.updateUser
 );
 
-router.patch('/deleteUser', userController.deleteUser);
-
-router.route('/').get(userController.getUsers);
-
-router.route('/:id').get(userController.getUser);
+router.get('/', userController.getUsers);
 
 module.exports = router;
