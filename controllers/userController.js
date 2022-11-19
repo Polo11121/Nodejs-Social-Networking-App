@@ -1,11 +1,12 @@
 const multer = require('multer');
 const sharp = require('sharp');
 const catchAsync = require('./../utils/catchAsync');
-const AppError = require('./../utils/appError');
 
 const User = require('./../models/userModel');
 const Post = require('./../models/postModel');
 const Match = require('./../models/matchModel');
+
+const AppError = require('./../utils/appError');
 
 const multerStorage = multer.memoryStorage();
 
@@ -115,33 +116,30 @@ exports.updateUser = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.deleteUser = catchAsync(async (req, res) => {
-  await User.findByIdAndUpdate(req.user.id, { active: false });
-
-  await Match.updateMany(
-    {
-      statuses: {
-        $elemMatch: {
-          user: req.user.id
-        }
-      }
-    },
-    { $set: { active: false } }
-  );
-
-  res.status(204).json({
-    status: 'success',
-    data: null
-  });
-});
-
 exports.getUser = catchAsync(async (req, res, next) => {
+  if (req.user.role === 'admin' && req.params.id === req.user.id) {
+    const user = await User.findById(req.params.id, {
+      role: 1,
+      email: 1,
+      name: 1,
+      surname: 1
+    });
+
+    if (!user) {
+      return next(new AppError('Nie znaleziono takiego użytkownika', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: user
+    });
+  }
+
   const user = await User.findOne(
     {
       $and: [
         { _id: req.params.id },
-        { active: { $eq: true } },
-        { accountConfirmed: { $eq: true } }
+        ...(req.user.role === 'user' ? [{ status: 'active' }] : [])
       ]
     },
     {
@@ -171,8 +169,6 @@ exports.getUser = catchAsync(async (req, res, next) => {
     return next(new AppError('Nie znaleziono takiego użytkownika', 404));
   }
 
-  let matchStatus;
-
   if (req.params.id !== req.user.id) {
     const match = await Match.findOne({
       $and: [
@@ -193,7 +189,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
       ]
     });
 
-    matchStatus = match
+    user.matchStatus = match
       ? match.statuses.map(({ status, user: matchUser }) => ({
           status,
           user: matchUser
@@ -202,9 +198,12 @@ exports.getUser = catchAsync(async (req, res, next) => {
           { status: 'none', user: req.params.id },
           { status: 'none', user: req.user.id }
         ];
-  }
 
-  user.matchStatus = matchStatus;
+    res.status(200).json({
+      status: 'success',
+      data: user
+    });
+  }
 
   res.status(200).json({
     status: 'success',
@@ -218,8 +217,7 @@ exports.getUsers = catchAsync(async (req, res, next) => {
   const users = await User.find(
     {
       $and: [
-        { active: { $eq: true } },
-        { accountConfirmed: { $eq: true } },
+        { status: 'active' },
         {
           $or: [
             {

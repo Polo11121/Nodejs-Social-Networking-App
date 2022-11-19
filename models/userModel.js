@@ -26,14 +26,15 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, 'Please provide your email'],
-      unique: [true, 'siema'],
+      unique: [true, 'Please provide unique email'],
       lowercase: true,
       validate: [validator.isEmail, 'Please provide a valid email']
     },
     role: {
       type: String,
       enum: ['user', 'admin'],
-      default: 'user'
+      default: 'user',
+      select: 0
     },
     profileImage: {
       type: String,
@@ -126,15 +127,9 @@ const userSchema = new mongoose.Schema(
         message: 'Passwords are not the same!'
       }
     },
-    active: {
-      type: Boolean,
-      default: true,
-      select: false
-    },
-    accountConfirmed: {
-      type: Boolean,
-      default: false,
-      select: false
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'noConfirmation', 'blocked']
     },
     accountConfirmedToken: { type: String, select: false },
     passwordChangedAt: { type: Date, select: false },
@@ -150,7 +145,8 @@ const userSchema = new mongoose.Schema(
   },
   {
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
+    timestamps: true
   }
 );
 
@@ -179,12 +175,6 @@ userSchema.pre('save', function(next) {
   }
 
   this.passwordChangedAt = Date.now() - 1000;
-
-  next();
-});
-
-userSchema.pre(/^find/, function(next) {
-  this.find({ active: { $ne: false } });
 
   next();
 });

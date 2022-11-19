@@ -14,6 +14,8 @@ const postRouter = require('./routes/postRoutes');
 const messageRouter = require('./routes/messageRoutes');
 const matchRouter = require('./routes/matchRoutes');
 const cityRouter = require('./routes/cityRoutes');
+const reportRouter = require('./routes/reportRoutes');
+const adminRouter = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -49,6 +51,8 @@ app.use('/api/v1/posts', postRouter);
 app.use('/api/v1/messages', messageRouter);
 app.use('/api/v1/cities', cityRouter);
 app.use('/api/v1/matches', matchRouter);
+app.use('/api/v1/report', reportRouter);
+app.use('/api/v1/admin', adminRouter);
 
 app.all('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

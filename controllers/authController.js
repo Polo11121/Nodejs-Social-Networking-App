@@ -3,9 +3,11 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('./../utils/email');
 const catchAsync = require('./../utils/catchAsync');
-const AppError = require('./../utils/appError');
 
 const User = require('./../models/userModel');
+const Match = require('./../models/matchModel');
+
+const AppError = require('./../utils/appError');
 
 const signToken = id =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -37,19 +39,34 @@ const createSendToken = (user, statusCode, res) => {
 };
 
 exports.signup = catchAsync(async (req, res, next) => {
-  const user = await User.findOne({ email: req.body.email, active: true });
+  const user = await User.findOne({ email: req.body.email });
 
-  if (user && user.accountConfirmed) {
-    return next(new AppError('Ten adres e-mail jest już używany', 401));
-  }
-
-  if (user && !user.accountConfirmed) {
+  if (user && user.status === 'noConfirmation') {
     return next(
       new AppError(
         'Konto z podanym adresem e-mail oczekuję na potwierdzenie, sprawdź skrzynkę pocztową',
         401
       )
     );
+  }
+
+  if (user && user.status === 'blocked') {
+    return next(
+      new AppError(
+        'Konto z podanym adresem e-mail zostało zablokowane, sprawdź skrzynkę pocztową',
+        401
+      )
+    );
+  }
+
+  if (user && user.status === 'inactive') {
+    return next(
+      new AppError('Konto z podanym adresem e-mail zostało usunięte', 401)
+    );
+  }
+
+  if (user) {
+    return next(new AppError('Ten adres e-mail jest już używany', 401));
   }
 
   const token = crypto.randomBytes(32).toString('hex');
@@ -59,19 +76,20 @@ exports.signup = catchAsync(async (req, res, next) => {
     .update(token)
     .digest('hex');
 
-  const newUser = await User.create({
-    ...req.body,
-    accountConfirmedToken,
-    random_point: { type: 'Point', coordinates: [Math.random(), 0] }
-  });
-
-  const resetURL = `http://localhost:3000/confirm-account/${token}`;
-
-  const message = `Witaj, ${newUser.name}!\nNiedawno zarejestrował${
-    newUser.gender === 'male' ? 'eś' : 'aś'
-  } się na DATE-APP, aby zakończyć proces rejestracji, potwierdź swoje konto klikając w poniższy link.\n${resetURL}`;
-
   try {
+    const newUser = await User.create({
+      ...req.body,
+      status: 'noConfirmation',
+      accountConfirmedToken,
+      random_point: { type: 'Point', coordinates: [Math.random(), 0] }
+    });
+
+    const resetURL = `http://localhost:3000/confirm-account/${token}`;
+
+    const message = `Witaj, ${newUser.name}!\nNiedawno zarejestrował${
+      newUser.gender === 'male' ? 'eś' : 'aś'
+    } się na DATE-APP, aby zakończyć proces rejestracji, potwierdź swoje konto klikając w poniższy link.\n${resetURL}`;
+
     await sendEmail({
       email: newUser.email,
       subject: 'Potwierdź założenie konta na DATE-APP',
@@ -84,9 +102,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     });
   } catch (err) {
     return next(
-      new AppError(
-        'Nie udało się wysłać wiadomości z linkiem aktywacyjnym na podany adres e-mail. Spróbuj ponownie później'
-      ),
+      new AppError('Nie udało się utowrzyć konta. Spróbuj ponownie później'),
       500
     );
   }
@@ -102,8 +118,12 @@ exports.confirmAccount = catchAsync(async (req, res, next) => {
     accountConfirmedToken: hashedToken
   });
 
-  user.accountConfirmed = true;
+  if (!user) {
+    return next(new AppError('Konto już zostało potwierdzone', 401));
+  }
+
   user.accountConfirmedToken = undefined;
+  user.status = 'active';
 
   await user.save({
     validateBeforeSave: false
@@ -119,20 +139,37 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError('Podaj login i hasło', 400));
   }
 
-  const user = await User.findOne({ email, active: { $eq: true } }).select(
-    '+password +accountConfirmed'
-  );
+  const user = await User.findOne({ email }).select({
+    password: 1,
+    role: 1,
+    status: 1
+  });
 
   if (!user || !(await user.correctPassword(password, user.password))) {
     return next(new AppError('Błędny login lub hasło', 401));
   }
 
-  if (!user.accountConfirmed) {
+  if (user.status === 'noConfirmation' && user.role === 'user') {
     return next(
       new AppError(
         'Konto z podanym adresem e-mail oczekuję na potwierdzenie, sprawdź skrzynkę pocztową',
         401
       )
+    );
+  }
+
+  if (user && user.status === 'blocked') {
+    return next(
+      new AppError(
+        'Konto z podanym adresem e-mail zostało zablokowane, sprawdź skrzynkę pocztową',
+        401
+      )
+    );
+  }
+
+  if (user && user.status === 'inactive') {
+    return next(
+      new AppError('Konto z podanym adresem e-mail zostało usunięte', 401)
     );
   }
 
@@ -151,8 +188,7 @@ exports.logout = (req, res) => {
 exports.forgotPassword = catchAsync(async (req, res, next) => {
   const user = await User.findOne({
     email: req.body.email,
-    active: true,
-    accountConfirmed: true
+    status: 'active'
   });
 
   if (!user) {
@@ -161,14 +197,14 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     );
   }
 
-  const resetToken = user.createPasswordResetToken();
-
-  await user.save({ validateBeforeSave: false });
-
-  const resetURL = `http://localhost:3000/reset-password/${resetToken}`;
-  const message = `Witaj, ${user.name}!\nOtrzymaliśmy prośbę dotyczącą zresetowania Twojego hasła na DATE-APP.\nAby zresetować hasło kliknij w poniższy link.\n(Link jest aktywny przez kolejne 10 minut)\n${resetURL}`;
-
   try {
+    const resetToken = user.createPasswordResetToken();
+
+    await user.save({ validateBeforeSave: false });
+
+    const resetURL = `http://localhost:3000/reset-password/${resetToken}`;
+    const message = `Witaj, ${user.name}!\nOtrzymaliśmy prośbę dotyczącą zresetowania Twojego hasła na DATE-APP.\nAby zresetować hasło kliknij w poniższy link.\n(Link jest aktywny przez kolejne 10 minut)\n${resetURL}`;
+
     await sendEmail({
       email: user.email,
       subject: 'Odzyskiwania dostępu do konta na DATE-APP',
@@ -196,8 +232,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
 exports.changeEmail = catchAsync(async (req, res, next) => {
   const isEmailUsed = await User.findOne({
-    email: req.body.email,
-    active: true
+    email: req.body.email
   });
 
   if (isEmailUsed) {
@@ -206,15 +241,15 @@ exports.changeEmail = catchAsync(async (req, res, next) => {
 
   const user = await User.findById(req.user.id);
 
-  const resetToken = user.createEmailResetToken();
-  user.newEmail = req.body.email;
-
-  await user.save({ validateBeforeSave: false });
-
-  const resetURL = `http://localhost:3000/change-email/${resetToken}`;
-  const message = `Witaj, ${user.name}!\nOtrzymaliśmy prośbę dotyczącą zmiany adresu e-mail na DATE-APP.\nAby zmienić e-mail kliknij w poniższy link.\n(Link jest aktywny przez kolejne 10 minut)\n${resetURL}`;
-
   try {
+    const resetToken = user.createEmailResetToken();
+    user.newEmail = req.body.email;
+
+    await user.save({ validateBeforeSave: false });
+
+    const resetURL = `http://localhost:3000/change-email/${resetToken}`;
+    const message = `Witaj, ${user.name}!\nOtrzymaliśmy prośbę dotyczącą zmiany adresu e-mail na DATE-APP.\nAby zmienić e-mail kliknij w poniższy link.\n(Link jest aktywny przez kolejne 10 minut)\n${resetURL}`;
+
     await sendEmail({
       email: req.body.email,
       subject: 'Zmiana adresu e-mail konta na DATE-APP',
@@ -247,14 +282,19 @@ exports.confirmEmail = catchAsync(async (req, res, next) => {
     .digest('hex');
 
   const user = await User.findOne({
-    emailResetToken: hashedToken,
-    emailResetExpires: { $gt: Date.now() }
-  }).select('+newEmail');
+    emailResetToken: hashedToken
+  }).select('+newEmail +emailResetExpires');
 
   if (!user) {
+    return next(new AppError('Link zmiany adresu e-mail stracił ważność', 400));
+  }
+
+  if (user && Date.parse(user.emailResetExpires) < Date.parse(new Date())) {
     user.newEmail = undefined;
     user.emailResetToken = undefined;
     user.emailResetExpires = undefined;
+
+    await user.save({ validateBeforeSave: false });
 
     return next(new AppError('Link zmiany adresu e-mail stracił ważność', 400));
   }
@@ -267,6 +307,8 @@ exports.confirmEmail = catchAsync(async (req, res, next) => {
     user.newEmail = undefined;
     user.emailResetToken = undefined;
     user.emailResetExpires = undefined;
+
+    await user.save({ validateBeforeSave: false });
 
     return next(new AppError('Ten adres e-mail jest już używany', 400));
   }
@@ -313,7 +355,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 });
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.user.id).select('+password');
+  const user = await User.findById(req.user.id).select({ password: 1 });
 
   if (!(await user.correctPassword(req.body.passwordCurrent, user.password))) {
     return next(new AppError('Aktualne hasło jest nieprawidłowe', 401));
@@ -325,6 +367,25 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   await user.save();
 
   createSendToken(user, 200, res);
+});
+
+exports.deleteUser = catchAsync(async (req, res) => {
+  await User.findByIdAndUpdate(req.user.id, { status: 'inactive' });
+
+  await Match.updateMany(
+    {
+      statuses: {
+        $elemMatch: {
+          user: req.user.id
+        }
+      }
+    },
+    { $set: { status: 'inactive' } }
+  );
+
+  res.status(204).json({
+    status: 'success'
+  });
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
