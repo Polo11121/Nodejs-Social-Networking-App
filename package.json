@@ -4,8 +4,8 @@
   "description": "Backend for an application for making friends and meeting new people",
   "main": "app.js",
   "scripts": {
-    "start": "NODE_ENV=production && node server.js",
-    "start:dev": "set NODE_ENV=development && nodemon server.js",
+    "start": "node server.js",
+    "start:dev": "nodemon server.js",
     "debug": "ndb server.js"
   },
   "author": "Michał Jasiński",
