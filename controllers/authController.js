@@ -25,6 +25,7 @@ const createSendToken = (user, statusCode, res) => {
 
   if (process.env.NODE_ENV === 'production') {
     cookieOptions.secure = true;
+    cookieOptions.domain = 'courageous-dodol-8694b3.netlify.app';
     cookieOptions.sameSite = 'none';
   }
 
