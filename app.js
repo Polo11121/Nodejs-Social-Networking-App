@@ -26,12 +26,12 @@ if (process.env.NODE_ENV === 'development') {
 const limiter = rateLimit({
   max: 1000000,
   windowMs: 60 * 60 * 1000,
-  message: 'Too many requests from this IP, please try again in an hour!'
+  message: 'Too many requests from this IP, please try again in an hour!',
 });
 
 app.use(
   cors({
-    origin: 'http://localhost:3000'
+    origin: 'http://https://courageous-dodol-8694b3.netlify.app/:3000',
   })
 );
 app.use(helmet());
