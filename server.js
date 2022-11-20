@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
 const socketio = require('socket.io');
+require('dotenv').config();
 
 const Message = require('./models/messageModel');
 const Match = require('./models/matchModel');
@@ -14,20 +14,23 @@ process.on('uncaughtException', err => {
 
 const app = require('./app');
 
-mongoose.connect(process.env.ATLAS_URI, {
+const uri = process.env.MONGODB_URI;
+
+mongoose.connect(uri, {
   useUnifiedTopology: true,
   useNewUrlParser: true,
   useCreateIndex: true,
   useFindAndModify: false
 });
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 const server = app.listen(port, () => {
   console.log(`App running on port ${port}...`);
 });
 
 process.on('unhandledRejection', err => {
   console.log('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.log(uri);
   console.log(err.name, err.message);
   server.close(() => {
     process.exit(1);
