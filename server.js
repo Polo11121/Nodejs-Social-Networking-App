@@ -12,8 +12,6 @@ process.on('uncaughtException', err => {
   process.exit(1);
 });
 
-dotenv.config();
-
 const app = require('./app');
 
 mongoose.connect(process.env.ATLAS_URI, {
