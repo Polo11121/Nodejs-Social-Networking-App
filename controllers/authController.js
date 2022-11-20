@@ -1,17 +1,17 @@
 const { promisify } = require('util');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const sendEmail = require('./../utils/email');
-const catchAsync = require('./../utils/catchAsync');
+const sendEmail = require('../utils/email');
+const catchAsync = require('../utils/catchAsync');
 
-const User = require('./../models/userModel');
-const Match = require('./../models/matchModel');
+const User = require('../models/userModel');
+const Match = require('../models/matchModel');
 
-const AppError = require('./../utils/appError');
+const AppError = require('../utils/appError');
 
-const signToken = id =>
+const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN
+    expiresIn: process.env.JWT_EXPIRES_IN,
   });
 
 const createSendToken = (user, statusCode, res) => {
@@ -20,11 +20,13 @@ const createSendToken = (user, statusCode, res) => {
     expires: new Date(
       Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
     ),
-    httpOnly: true
+    httpOnly: true,
   };
 
   if (process.env.NODE_ENV === 'production') {
     cookieOptions.secure = true;
+    cookieOptions.sameSite = 'none';
+    cookieOptions.domain = 'https://courageous-dodol-8694b3.netlify.app';
   }
 
   res.cookie('jwt', token, cookieOptions);
@@ -34,7 +36,7 @@ const createSendToken = (user, statusCode, res) => {
   res.status(statusCode).json({
     status: 'success',
     token,
-    data: user
+    data: user,
   });
 };
 
@@ -81,7 +83,7 @@ exports.signup = catchAsync(async (req, res, next) => {
       ...req.body,
       status: 'noConfirmation',
       accountConfirmedToken,
-      random_point: { type: 'Point', coordinates: [Math.random(), 0] }
+      random_point: { type: 'Point', coordinates: [Math.random(), 0] },
     });
 
     const resetURL = `http://localhost:3000/confirm-account/${token}`;
@@ -93,12 +95,12 @@ exports.signup = catchAsync(async (req, res, next) => {
     await sendEmail({
       email: newUser.email,
       subject: 'Potwierdź założenie konta na DATE-APP',
-      message
+      message,
     });
 
     res.status(200).json({
       status: 'success',
-      message: 'Token sent to email!'
+      message: 'Token sent to email!',
     });
   } catch (err) {
     return next(
@@ -115,7 +117,7 @@ exports.confirmAccount = catchAsync(async (req, res, next) => {
     .digest('hex');
 
   const user = await User.findOne({
-    accountConfirmedToken: hashedToken
+    accountConfirmedToken: hashedToken,
   });
 
   if (!user) {
@@ -126,7 +128,7 @@ exports.confirmAccount = catchAsync(async (req, res, next) => {
   user.status = 'active';
 
   await user.save({
-    validateBeforeSave: false
+    validateBeforeSave: false,
   });
 
   createSendToken(user, 200, res);
@@ -142,7 +144,7 @@ exports.login = catchAsync(async (req, res, next) => {
   const user = await User.findOne({ email }).select({
     password: 1,
     role: 1,
-    status: 1
+    status: 1,
   });
 
   if (!user || !(await user.correctPassword(password, user.password))) {
@@ -179,7 +181,7 @@ exports.login = catchAsync(async (req, res, next) => {
 exports.logout = (req, res) => {
   res.cookie('jwt', '', {
     expires: new Date(Date.now() + 10 * 1000),
-    httpOnly: true
+    httpOnly: true,
   });
 
   res.status(200).json({ status: 'success' });
@@ -188,7 +190,7 @@ exports.logout = (req, res) => {
 exports.forgotPassword = catchAsync(async (req, res, next) => {
   const user = await User.findOne({
     email: req.body.email,
-    status: 'active'
+    status: 'active',
   });
 
   if (!user) {
@@ -208,12 +210,12 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     await sendEmail({
       email: user.email,
       subject: 'Odzyskiwania dostępu do konta na DATE-APP',
-      message
+      message,
     });
 
     res.status(200).json({
       status: 'success',
-      message: 'Token sent to email!'
+      message: 'Token sent to email!',
     });
   } catch (err) {
     user.passwordResetToken = undefined;
@@ -232,7 +234,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
 exports.changeEmail = catchAsync(async (req, res, next) => {
   const isEmailUsed = await User.findOne({
-    email: req.body.email
+    email: req.body.email,
   });
 
   if (isEmailUsed) {
@@ -253,12 +255,12 @@ exports.changeEmail = catchAsync(async (req, res, next) => {
     await sendEmail({
       email: req.body.email,
       subject: 'Zmiana adresu e-mail konta na DATE-APP',
-      message
+      message,
     });
 
     res.status(200).json({
       status: 'success',
-      message: 'Token sent to email!'
+      message: 'Token sent to email!',
     });
   } catch (err) {
     user.emailResetToken = undefined;
@@ -282,7 +284,7 @@ exports.confirmEmail = catchAsync(async (req, res, next) => {
     .digest('hex');
 
   const user = await User.findOne({
-    emailResetToken: hashedToken
+    emailResetToken: hashedToken,
   }).select('+newEmail +emailResetExpires');
 
   if (!user) {
@@ -300,7 +302,7 @@ exports.confirmEmail = catchAsync(async (req, res, next) => {
   }
 
   const isEmailUsed = await User.findOne({
-    email: user.newEmail
+    email: user.newEmail,
   });
 
   if (isEmailUsed) {
@@ -322,7 +324,7 @@ exports.confirmEmail = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    message: 'Email changed'
+    message: 'Email changed',
   });
 });
 
@@ -334,7 +336,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 
   const user = await User.findOne({
     passwordResetToken: hashedToken,
-    passwordResetExpires: { $gt: Date.now() }
+    passwordResetExpires: { $gt: Date.now() },
   });
 
   if (!user) {
@@ -350,7 +352,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    message: 'Password changed'
+    message: 'Password changed',
   });
 });
 
@@ -376,15 +378,15 @@ exports.deleteUser = catchAsync(async (req, res) => {
     {
       statuses: {
         $elemMatch: {
-          user: req.user.id
-        }
-      }
+          user: req.user.id,
+        },
+      },
     },
     { $set: { status: 'inactive' } }
   );
 
   res.status(204).json({
-    status: 'success'
+    status: 'success',
   });
 });
 
@@ -430,10 +432,12 @@ exports.protect = catchAsync(async (req, res, next) => {
   next();
 });
 
-exports.restrictTo = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role)) {
-    return next(new AppError('Nie masz dostępu do wykonania tej akcji', 403));
-  }
+exports.restrictTo =
+  (...roles) =>
+  (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(new AppError('Nie masz dostępu do wykonania tej akcji', 403));
+    }
 
-  next();
-};
+    next();
+  };
