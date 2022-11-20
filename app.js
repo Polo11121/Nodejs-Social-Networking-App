@@ -31,7 +31,10 @@ const limiter = rateLimit({
 
 app.use(
   cors({
-    origin: 'https://courageous-dodol-8694b3.netlify.app/',
+    origin: [
+      'http://localhost:3000',
+      'https://courageous-dodol-8694b3.netlify.app',
+    ],
   })
 );
 app.use(helmet());
