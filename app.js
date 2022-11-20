@@ -31,6 +31,7 @@ const limiter = rateLimit({
 
 app.use(
   cors({
+    credentials: true,
     origin: [
       'http://localhost:3000',
       'https://courageous-dodol-8694b3.netlify.app',
