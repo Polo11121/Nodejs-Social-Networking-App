@@ -18,9 +18,7 @@ const uri = process.env.MONGODB_URI;
 
 mongoose.connect(uri, {
   useUnifiedTopology: true,
-  useNewUrlParser: true,
-  useCreateIndex: true,
-  useFindAndModify: false
+  useNewUrlParser: true
 });
 
 const port = process.env.PORT || 3001;
@@ -30,7 +28,7 @@ const server = app.listen(port, () => {
 
 process.on('unhandledRejection', err => {
   console.log('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.log(uri);
+
   console.log(err.name, err.message);
   server.close(() => {
     process.exit(1);
