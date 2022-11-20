@@ -16,9 +16,7 @@ dotenv.config({ path: './config.env' });
 
 const app = require('./app');
 
-const DB = process.env.DATABASE;
-
-mongoose.connect(DB, {
+mongoose.connect(process.env.ATLAS_URI, {
   useUnifiedTopology: true,
   useNewUrlParser: true,
   useCreateIndex: true,
