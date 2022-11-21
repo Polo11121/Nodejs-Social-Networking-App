@@ -16,18 +16,17 @@ const signToken = id =>
 
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
-  const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
-    ),
-    httpOnly: true
-  };
 
-  if (process.env.NODE_ENV === 'production') {
-    cookieOptions.secure = true;
+  if (process.env.NODE_ENV === 'development') {
+    const cookieOptions = {
+      expires: new Date(
+        Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+      ),
+      httpOnly: true
+    };
+
+    res.cookie('jwt', token, cookieOptions);
   }
-
-  res.cookie('jwt', token, cookieOptions);
 
   user.password = undefined;
 
@@ -177,10 +176,12 @@ exports.login = catchAsync(async (req, res, next) => {
 });
 
 exports.logout = (req, res) => {
-  res.cookie('jwt', '', {
-    expires: new Date(Date.now() + 10 * 1000),
-    httpOnly: true
-  });
+  if (process.env.NODE_ENV === 'production') {
+    res.cookie('jwt', '', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true
+    });
+  }
 
   res.status(200).json({ status: 'success' });
 };
@@ -391,13 +392,13 @@ exports.deleteUser = catchAsync(async (req, res) => {
 exports.protect = catchAsync(async (req, res, next) => {
   let token;
 
-  if (
+  if (req.cookies.jwt) {
+    token = req.cookies.jwt;
+  } else if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
     token = req.headers.authorization.split(' ')[1];
-  } else if (req.cookies.jwt) {
-    token = req.cookies.jwt;
   }
 
   if (!token) {
