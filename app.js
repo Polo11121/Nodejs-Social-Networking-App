@@ -32,10 +32,7 @@ const limiter = rateLimit({
 app.use(
   cors({
     credentials: true,
-    origin: [
-      'http://localhost:3000',
-      'https://praca-inzynierska-frontend.vercel.app',
-    ],
+    origin: ['http://localhost:3000', 'https://date-app.onrender.com'],
   })
 );
 app.use(helmet());
