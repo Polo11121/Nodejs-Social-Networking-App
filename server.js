@@ -35,7 +35,12 @@ process.on('unhandledRejection', (err) => {
   });
 });
 
-const io = socketio(server);
+const io = socketio(server, {
+  cors: {
+    origin: 'https://date-app.onrender.com',
+    methods: ['GET', 'POST'],
+  },
+});
 const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
