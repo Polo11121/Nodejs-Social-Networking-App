@@ -16,13 +16,14 @@ dotenv.config();
 
 const app = require('./app');
 
-const uri = process.env.MONGODB_URI;
+const DB = process.env.DATABASE.replace(
+  '<PASSWORD>',
+  process.env.DATABASE_PASSWORD
+);
 
-mongoose.connect(uri, {
+mongoose.connect(DB, {
   useUnifiedTopology: true,
-  useNewUrlParser: true,
-  useCreateIndex: true,
-  useFindAndModify: false
+  useNewUrlParser: true
 });
 
 const port = process.env.PORT || 3000;
