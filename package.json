@@ -4,9 +4,9 @@
   "description": "Backend for an application for making friends and meeting new people",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon server.js",
-    "start:prod": "node server.js",
-    "debug": "ndb server.js"
+    "start": "node server.js",
+    "start:dev": "nodemon server.js",
+    "debug": "ndb sever.js"
   },
   "author": "Michał Jasiński",
   "license": "ISC",
