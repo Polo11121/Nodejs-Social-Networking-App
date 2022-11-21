@@ -31,7 +31,10 @@ const limiter = rateLimit({
 
 app.use(
   cors({
-    origin: 'http://localhost:3000'
+    origin: [
+      'http://localhost:3000',
+      'https://date-app-praca-inzynierska.netlify.app'
+    ]
   })
 );
 app.use(helmet());
