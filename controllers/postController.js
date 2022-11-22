@@ -26,16 +26,16 @@ exports.resizePostPhotos = catchAsync(async (req, res, next) => {
 
     await Promise.all(
       req.files.map(async (file, i) => {
-        const imagesPath = 'public/img/posts/';
+        const imagesPath = 'public/img/posts';
         const filename = `post-${req.user.id}-${Date.now()}-image-${
           i + 1
         }.jpeg`;
 
         await sharp(file.buffer)
           .toFormat('jpeg')
-          .toFile(`${imagesPath}${filename}`);
+          .toFile(`${imagesPath}/${filename}`);
 
-        req.body.images.push(`${imagesPath}${filename}`);
+        req.body.images.push(`${imagesPath}/${filename}`);
       })
     );
   }

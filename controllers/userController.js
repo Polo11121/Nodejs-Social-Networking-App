@@ -79,10 +79,10 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     'filters'
   );
 
-  const imagesPath = 'public/img/users/';
+  const imagesPath = 'public/img/users';
 
   if (req.files && req.files.profileImage) {
-    interestedBody.profileImage = `${imagesPath}/${req.files.profileImage[0].filename}`;
+    interestedBody.profileImage = `${req.headers.host}}${imagesPath}/${req.files.profileImage[0].filename}`;
 
     await Post.create({
       type: 'profile',
