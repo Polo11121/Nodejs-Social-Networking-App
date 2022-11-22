@@ -5,22 +5,22 @@ const messageSchema = new mongoose.Schema(
     text: { type: String, required: false },
     receiver: {
       type: mongoose.Schema.ObjectId,
-      ref: 'User'
+      ref: 'User',
     },
     receiverRead: { type: Boolean, default: false },
     images: { type: [String], default: [] },
     users: { type: Array, select: false },
     sender: {
       type: mongoose.Schema.ObjectId,
-      ref: 'User'
-    }
+      ref: 'User',
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   },
   {
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
   }
 );
 

@@ -1,12 +1,12 @@
 const multer = require('multer');
 const sharp = require('sharp');
-const catchAsync = require('./../utils/catchAsync');
+const catchAsync = require('../utils/catchAsync');
 
-const User = require('./../models/userModel');
-const Post = require('./../models/postModel');
-const Match = require('./../models/matchModel');
+const User = require('../models/userModel');
+const Post = require('../models/postModel');
+const Match = require('../models/matchModel');
 
-const AppError = require('./../utils/appError');
+const AppError = require('../utils/appError');
 
 const multerStorage = multer.memoryStorage();
 
@@ -22,7 +22,7 @@ const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
 
 exports.uploadUserPhotos = upload.fields([
   { name: 'profileImage' },
-  { name: 'backgroundImage' }
+  { name: 'backgroundImage' },
 ]);
 
 exports.resizeUserProfilePhotos = catchAsync(async (req, res, next) => {
@@ -49,7 +49,7 @@ exports.resizeUserProfilePhotos = catchAsync(async (req, res, next) => {
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
-  Object.keys(obj).forEach(el => {
+  Object.keys(obj).forEach((el) => {
     if (allowedFields.includes(el)) newObj[el] = obj[el];
   });
 
@@ -88,7 +88,7 @@ exports.updateUser = catchAsync(async (req, res, next) => {
       type: 'profile',
       user: req.user.id,
       images: [interestedBody.profileImage],
-      description: 'Zaktualizowano zdjęcie profilowe'
+      description: 'Zaktualizowano zdjęcie profilowe',
     });
   } else if (req.files && req.files.backgroundImage) {
     interestedBody.backgroundImage = `${imagesPath}/${req.files.backgroundImage[0].filename}`;
@@ -97,7 +97,7 @@ exports.updateUser = catchAsync(async (req, res, next) => {
       type: 'background',
       user: req.user.id,
       images: [interestedBody.backgroundImage],
-      description: 'Zaktualizowano zdjęcie w tle'
+      description: 'Zaktualizowano zdjęcie w tle',
     });
   }
 
@@ -106,13 +106,13 @@ exports.updateUser = catchAsync(async (req, res, next) => {
     interestedBody,
     {
       new: true,
-      runValidators: true
+      runValidators: true,
     }
   );
 
   res.status(200).json({
     status: 'success',
-    data: updatedUser
+    data: updatedUser,
   });
 });
 
@@ -122,7 +122,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
       role: 1,
       email: 1,
       name: 1,
-      surname: 1
+      surname: 1,
     });
 
     if (!user) {
@@ -131,7 +131,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
       status: 'success',
-      data: user
+      data: user,
     });
   }
 
@@ -139,29 +139,29 @@ exports.getUser = catchAsync(async (req, res, next) => {
     {
       $and: [
         { _id: req.params.id },
-        ...(req.user.role === 'user' ? [{ status: 'active' }] : [])
-      ]
+        ...(req.user.role === 'user' ? [{ status: 'active' }] : []),
+      ],
     },
     {
       __v: 0,
-      id: 0
+      id: 0,
     }
   )
     .populate({
       path: 'filters.interestedCity',
-      select: 'city location'
+      select: 'city location',
     })
     .populate({
       path: 'home',
-      select: 'city location'
+      select: 'city location',
     })
     .populate({
       path: 'childCity',
-      select: 'city'
+      select: 'city',
     })
     .populate({
       path: 'cities',
-      select: 'city'
+      select: 'city',
     })
     .populate({ path: 'posts', options: { sort: { createdAt: -1 } } });
 
@@ -175,39 +175,39 @@ exports.getUser = catchAsync(async (req, res, next) => {
         {
           statuses: {
             $elemMatch: {
-              user: req.user.id
-            }
-          }
+              user: req.user.id,
+            },
+          },
         },
         {
           statuses: {
             $elemMatch: {
-              user: req.params.id
-            }
-          }
-        }
-      ]
+              user: req.params.id,
+            },
+          },
+        },
+      ],
     });
 
     user.matchStatus = match
       ? match.statuses.map(({ status, user: matchUser }) => ({
           status,
-          user: matchUser
+          user: matchUser,
         }))
       : [
           { status: 'none', user: req.params.id },
-          { status: 'none', user: req.user.id }
+          { status: 'none', user: req.user.id },
         ];
 
     res.status(200).json({
       status: 'success',
-      data: user
+      data: user,
     });
   }
 
   res.status(200).json({
     status: 'success',
-    data: user
+    data: user,
   });
 });
 
@@ -226,8 +226,8 @@ exports.getUsers = catchAsync(async (req, res, next) => {
                   splittedSearchTerm.length === 2
                     ? splittedSearchTerm[0]
                     : req.query.searchTerm,
-                $options: 'i'
-              }
+                $options: 'i',
+              },
             },
             {
               surname: {
@@ -235,19 +235,19 @@ exports.getUsers = catchAsync(async (req, res, next) => {
                   splittedSearchTerm.length === 2
                     ? splittedSearchTerm[1]
                     : req.query.searchTerm,
-                $options: 'i'
-              }
-            }
-          ]
+                $options: 'i',
+              },
+            },
+          ],
         },
-        { _id: { $ne: req.user.id } }
-      ]
+        { _id: { $ne: req.user.id } },
+      ],
     },
     { name: 1, surname: 1, profileImage: 1 }
   ).limit(5);
 
   res.status(200).json({
     status: 'success',
-    data: users
+    data: users,
   });
 });

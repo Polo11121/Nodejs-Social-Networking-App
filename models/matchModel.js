@@ -9,16 +9,16 @@ const matchSchema = new mongoose.Schema(
         status: {
           type: String,
           enum: ['left', 'right', 'match', 'request', 'reject', 'none'],
-          default: 'none'
+          default: 'none',
         },
-        new: { type: Boolean, default: true }
-      }
+        new: { type: Boolean, default: true },
+      },
     ],
-    users: [{ type: mongoose.Schema.ObjectId, ref: 'User', default: [] }]
+    users: [{ type: mongoose.Schema.ObjectId, ref: 'User', default: [] }],
   },
   {
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
   }
 );
 

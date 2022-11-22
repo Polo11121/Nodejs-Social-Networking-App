@@ -4,18 +4,18 @@ const pointSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: ['Point'],
-    required: true
+    required: true,
   },
   coordinates: {
     type: [Number],
-    required: true
-  }
+    required: true,
+  },
 });
 
 const citySchema = new mongoose.Schema({
   city: String,
   location: { type: pointSchema, index: '2dsphere' },
-  province: String
+  province: String,
 });
 
 citySchema.index({ location: '2dsphere' });
