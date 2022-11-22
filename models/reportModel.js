@@ -9,7 +9,7 @@ const reportSchema = new mongoose.Schema(
     adminComment: String,
     reportSolution: {
       type: String,
-      enum: ['closeReport', 'closeReportAndBlockUser']
+      enum: ['closeReport', 'closeReportAndBlockUser'],
     },
     status: { type: String, enum: ['new', 'inProgress', 'solved'] },
     reportId: String,
@@ -21,16 +21,16 @@ const reportSchema = new mongoose.Schema(
         'fakeName',
         'inappropriateContent',
         'cyberbullying',
-        'otherReason'
-      ]
-    }
+        'otherReason',
+      ],
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   },
   {
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
   }
 );
 

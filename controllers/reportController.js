@@ -1,23 +1,23 @@
 const catchAsync = require('../utils/catchAsync');
 const sendEmail = require('../utils/email');
 
-const Report = require('./../models/reportModel');
-const User = require('./../models/userModel');
-const Match = require('./../models/matchModel');
+const Report = require('../models/reportModel');
+const User = require('../models/userModel');
+const Match = require('../models/matchModel');
 
-const APIFeatures = require('./../utils/apiFeatures');
-const AppError = require('./../utils/appError');
+const APIFeatures = require('../utils/apiFeatures');
+const AppError = require('../utils/appError');
 
 exports.createReport = catchAsync(async (req, res) => {
   const report = await Report.create({
     status: req.body.admin ? 'inProgress' : 'new',
     reportId: `Z${await Report.countDocuments()}`,
-    ...req.body
+    ...req.body,
   });
 
   res.status(200).json({
     status: 'success',
-    data: report
+    data: report,
   });
 });
 
@@ -25,21 +25,21 @@ exports.getNewReports = catchAsync(async (req, res) => {
   const reports = await Report.find({ status: 'new' })
     .populate({
       path: 'reportingUser',
-      select: 'name surname profileImage status'
+      select: 'name surname profileImage status',
     })
     .populate({
       path: 'reportedUser',
-      select: 'name surname profileImage status'
+      select: 'name surname profileImage status',
     })
     .populate({
       path: 'admin',
-      select: 'name surname profileImage'
+      select: 'name surname profileImage',
     })
     .sort({ createdAt: -1 });
 
   res.status(200).json({
     status: 'success',
-    data: reports
+    data: reports,
   });
 });
 
@@ -52,10 +52,10 @@ exports.updateReport = catchAsync(async (req, res, next) => {
     report = await Report.findByIdAndUpdate(req.params.id, {
       status,
       reportSolution,
-      adminComment
+      adminComment,
     }).populate({
       path: 'reportedUser',
-      select: 'email name'
+      select: 'email name',
     });
 
     if (reportSolution === 'closeReportAndBlockUser') {
@@ -63,15 +63,15 @@ exports.updateReport = catchAsync(async (req, res, next) => {
         const message = `Witaj, ${report.reportedUser.name}!\nTwoje konta na serwisie DATE-APP zostało zablokowane.\nKomentarz od administratora:\n ${adminComment}`;
 
         await User.findByIdAndUpdate(report.reportedUser.id, {
-          status: 'blocked'
+          status: 'blocked',
         });
         await Match.updateMany(
           {
             statuses: {
               $elemMatch: {
-                user: report.reportedUser.id
-              }
-            }
+                user: report.reportedUser.id,
+              },
+            },
           },
           { $set: { status: 'inactive' } }
         );
@@ -79,7 +79,7 @@ exports.updateReport = catchAsync(async (req, res, next) => {
         await sendEmail({
           email: report.reportedUser.email,
           subject: 'Zablokowanie konta na DATE-APP',
-          message
+          message,
         });
       } catch (err) {
         return next(
@@ -93,13 +93,13 @@ exports.updateReport = catchAsync(async (req, res, next) => {
   } else {
     report = await Report.findByIdAndUpdate(req.params.id, {
       admin,
-      status
+      status,
     });
   }
 
   res.status(200).json({
     status: 'success',
-    data: report
+    data: report,
   });
 });
 
@@ -108,7 +108,7 @@ exports.getReports = catchAsync(async (req, res) => {
 
   const filters = [
     ...(status ? [{ status }] : []),
-    ...(admin ? [{ admin }] : [])
+    ...(admin ? [{ admin }] : []),
   ];
 
   const query = Report.find({
@@ -119,28 +119,28 @@ exports.getReports = catchAsync(async (req, res) => {
           {
             reportId: {
               $regex: searchTerm,
-              $options: 'i'
-            }
-          }
-        ]
-      }
-    ]
+              $options: 'i',
+            },
+          },
+        ],
+      },
+    ],
   })
     .populate({
       path: 'reportingUser',
-      select: 'name surname profileImage status'
+      select: 'name surname profileImage status',
     })
     .populate({
       path: 'reportedUser',
-      select: 'name surname profileImage status'
+      select: 'name surname profileImage status',
     })
     .populate({
       path: 'admin',
-      select: 'name surname profileImage'
+      select: 'name surname profileImage',
     })
     .sort({ createdAt: -1 });
 
-  const results = (await query).length;
+  const results = (await query.clone).length;
 
   const features = new APIFeatures(query, req.query, results).paginate();
 
@@ -152,7 +152,7 @@ exports.getReports = catchAsync(async (req, res) => {
     status: 'success',
     data: reports,
     results,
-    hasNextPage
+    hasNextPage,
   });
 });
 
@@ -160,20 +160,20 @@ exports.getUserReports = catchAsync(async (req, res) => {
   const reports = await Report.find({ reportedUser: req.params.id })
     .populate({
       path: 'reportingUser',
-      select: 'name surname profileImage status'
+      select: 'name surname profileImage status',
     })
     .populate({
       path: 'reportedUser',
-      select: 'name surname profileImage status'
+      select: 'name surname profileImage status',
     })
     .populate({
       path: 'admin',
-      select: 'name surname profileImage'
+      select: 'name surname profileImage',
     })
     .sort({ createdAt: -1 });
 
   res.status(200).json({
     status: 'success',
-    data: reports
+    data: reports,
   });
 });

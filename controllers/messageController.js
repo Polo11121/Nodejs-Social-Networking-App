@@ -4,11 +4,11 @@ const sharp = require('sharp');
 const multerStorage = multer.memoryStorage();
 const catchAsync = require('../utils/catchAsync');
 
-const Message = require('./../models/messageModel');
-const Match = require('./../models/matchModel');
+const Message = require('../models/messageModel');
+const Match = require('../models/matchModel');
 
-const AppError = require('./../utils/appError');
-const APIFeatures = require('./../utils/apiFeatures');
+const AppError = require('../utils/appError');
+const APIFeatures = require('../utils/apiFeatures');
 
 const multerFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image')) {
@@ -29,8 +29,9 @@ exports.resizeMessagePhotos = catchAsync(async (req, res, next) => {
     await Promise.all(
       req.files.map(async (file, i) => {
         const imagesPath = 'public/img/messages/';
-        const filename = `message-${req.user.id}-${Date.now()}-image-${i +
-          1}.jpeg`;
+        const filename = `message-${req.user.id}-${Date.now()}-image-${
+          i + 1
+        }.jpeg`;
 
         await sharp(file.buffer)
           .toFormat('jpeg')
@@ -46,30 +47,30 @@ exports.resizeMessagePhotos = catchAsync(async (req, res, next) => {
 exports.getLastMessages = catchAsync(async (req, res) => {
   const matches = await Match.find(
     {
-      $and: [{ users: { $in: [req.user.id] } }, { active: true }]
+      $and: [{ users: { $in: [req.user.id] } }, { active: true }],
     },
     { statuses: { $elemMatch: { user: { $ne: req.user.id } } } }
   ).populate({
     path: 'statuses.user',
-    select: 'name surname profileImage'
+    select: 'name surname profileImage',
   });
 
   const lastMessages = await Promise.all(
-    matches.map(async match => {
+    matches.map(async (match) => {
       const message = await Message.findOne(
         {
           users: {
             $all: [
               req.user.id.toString(),
-              match.statuses[0].user._id.toString()
-            ]
-          }
+              match.statuses[0].user._id.toString(),
+            ],
+          },
         },
         { sender: 1, text: 1, createdAt: 1, receiverRead: 1 }
       )
         .populate({
           path: 'sender',
-          select: 'name surname profileImage'
+          select: 'name surname profileImage',
         })
         .sort({ createdAt: -1 });
 
@@ -80,12 +81,12 @@ exports.getLastMessages = catchAsync(async (req, res) => {
   const matchesWithLastMessage = matches.map((match, index) => ({
     _id: match._id,
     match: match.statuses[0].user,
-    lastMessage: lastMessages[index]
+    lastMessage: lastMessages[index],
   }));
 
   res.status(200).json({
     status: 'success',
-    data: matchesWithLastMessage
+    data: matchesWithLastMessage,
   });
 });
 
@@ -95,33 +96,33 @@ exports.getAllMessages = catchAsync(async (req, res) => {
       $and: [
         { users: { $all: [req.user.id, req.params.id] } },
         { receiver: req.user.id },
-        { receiverRead: { $ne: true } }
-      ]
+        { receiverRead: { $ne: true } },
+      ],
     },
     {
       $set: {
-        receiverRead: true
-      }
+        receiverRead: true,
+      },
     }
   );
 
   const query = Message.find(
     {
-      users: { $all: [req.user.id, req.params.id] }
+      users: { $all: [req.user.id, req.params.id] },
     },
     { receiverRead: 0, updatedAt: 0, __v: 0 }
   )
     .populate({
       path: 'receiver',
-      select: 'name surname profileImage'
+      select: 'name surname profileImage',
     })
     .populate({
       path: 'sender',
-      select: 'name surname profileImage'
+      select: 'name surname profileImage',
     })
     .sort({ createdAt: -1 });
 
-  const results = (await query).length;
+  const results = (await query.clone()).length;
   const features = new APIFeatures(query, req.query, results).paginate();
 
   const messages = await features.query;
@@ -132,7 +133,7 @@ exports.getAllMessages = catchAsync(async (req, res) => {
 
 exports.getUnreadMessages = catchAsync(async (req, res) => {
   const unreadMessages = await Message.countDocuments({
-    $and: [{ receiver: req.user.id }, { receiverRead: { $ne: true } }]
+    $and: [{ receiver: req.user.id }, { receiverRead: { $ne: true } }],
   });
 
   res.status(200).json({ status: 'success', data: unreadMessages });
@@ -144,11 +145,11 @@ exports.addMessage = catchAsync(async (req, res) => {
     sender: req.user.id,
     receiver: req.body.receiver,
     users: [req.user.id, req.body.receiver],
-    images: req.body.images
+    images: req.body.images,
   });
 
   res.status(201).json({
     status: 'success',
-    data: newMessage
+    data: newMessage,
   });
 });

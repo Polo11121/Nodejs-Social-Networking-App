@@ -1,27 +1,27 @@
 const catchAsync = require('../utils/catchAsync');
 const sendEmail = require('../utils/email');
 
-const Report = require('./../models/reportModel');
-const User = require('./../models/userModel');
+const Report = require('../models/reportModel');
+const User = require('../models/userModel');
 
-const APIFeatures = require('./../utils/apiFeatures');
-const AppError = require('./../utils/appError');
+const APIFeatures = require('../utils/apiFeatures');
+const AppError = require('../utils/appError');
 
 exports.getDashboardCounters = catchAsync(async (req, res) => {
   const allReports = await Report.countDocuments();
   const newReports = await Report.countDocuments({ status: 'new' });
   const solvedReports = await Report.countDocuments({
-    status: 'solved'
+    status: 'solved',
   });
   const myReports = await Report.countDocuments({
-    admin: req.user.id
+    admin: req.user.id,
   });
 
   const users = await User.countDocuments({
-    role: 'user'
+    role: 'user',
   });
   const administrators = await User.countDocuments({
-    role: 'admin'
+    role: 'admin',
   });
 
   res.status(200).json({
@@ -32,8 +32,8 @@ exports.getDashboardCounters = catchAsync(async (req, res) => {
       solvedReports,
       myReports,
       users,
-      administrators
-    }
+      administrators,
+    },
   });
 });
 
@@ -55,14 +55,14 @@ exports.getUsers = catchAsync(async (req, res) => {
                   splittedSearchTerm.length === 2
                     ? splittedSearchTerm[0]
                     : searchTerm,
-                $options: 'i'
-              }
+                $options: 'i',
+              },
             },
             {
               email: {
                 $regex: searchTerm,
-                $options: 'i'
-              }
+                $options: 'i',
+              },
             },
             {
               surname: {
@@ -70,12 +70,12 @@ exports.getUsers = catchAsync(async (req, res) => {
                   splittedSearchTerm.length === 2
                     ? splittedSearchTerm[1]
                     : searchTerm,
-                $options: 'i'
-              }
-            }
-          ]
-        }
-      ]
+                $options: 'i',
+              },
+            },
+          ],
+        },
+      ],
     },
     {
       email: 1,
@@ -83,12 +83,11 @@ exports.getUsers = catchAsync(async (req, res) => {
       surname: 1,
       profileImage: 1,
       createdAt: 1,
-      status: 1
+      status: 1,
     }
   );
 
-  const results = (await query).length;
-
+  const results = (await query.clone()).length;
   const features = new APIFeatures(query, req.query, results).paginate();
 
   const users = await features.query;
@@ -99,14 +98,14 @@ exports.getUsers = catchAsync(async (req, res) => {
     status: 'success',
     data: users,
     results,
-    hasNextPage
+    hasNextPage,
   });
 });
 
 exports.unblockUser = catchAsync(async (req, res, next) => {
   try {
     const user = await User.findByIdAndUpdate(req.params.id, {
-      status: 'active'
+      status: 'active',
     });
 
     const message = 'Twoje konta na serwisie DATE-APP zostało odblokowane.';
@@ -114,7 +113,7 @@ exports.unblockUser = catchAsync(async (req, res, next) => {
     await sendEmail({
       email: user.email,
       subject: 'Odblokowanie konto na DATE-APP',
-      message
+      message,
     });
   } catch (err) {
     return next(
@@ -124,37 +123,37 @@ exports.unblockUser = catchAsync(async (req, res, next) => {
   }
 
   res.status(200).json({
-    status: 'success'
+    status: 'success',
   });
 });
 
 exports.getAdministrators = catchAsync(async (req, res) => {
   const administrators = await User.find(
     {
-      role: 'admin'
+      role: 'admin',
     },
     {
       email: 1,
       name: 1,
       surname: 1,
       profileImage: 1,
-      createdAt: 1
+      createdAt: 1,
     }
   );
 
   res.status(200).json({
     status: 'success',
-    data: administrators
+    data: administrators,
   });
 });
 
 exports.getAdminReportsCounters = catchAsync(async (req, res) => {
   const allReports = await Report.countDocuments({ admin: req.params.id });
   const newReports = await Report.countDocuments({
-    $and: [{ admin: req.params.id }, { status: 'new' }]
+    $and: [{ admin: req.params.id }, { status: 'new' }],
   });
   const solvedReports = await Report.countDocuments({
-    $and: [{ admin: req.params.id }, { status: 'solved' }]
+    $and: [{ admin: req.params.id }, { status: 'solved' }],
   });
 
   res.status(200).json({
@@ -162,7 +161,7 @@ exports.getAdminReportsCounters = catchAsync(async (req, res) => {
     data: {
       allReports,
       newReports,
-      solvedReports
-    }
+      solvedReports,
+    },
   });
 });

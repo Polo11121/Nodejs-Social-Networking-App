@@ -6,7 +6,7 @@ const Message = require('./models/messageModel');
 const Match = require('./models/matchModel');
 const User = require('./models/userModel');
 
-process.on('uncaughtException', err => {
+process.on('uncaughtException', (err) => {
   console.log('UNCAUGHT EXCEPTION! 💥 Shutting down...');
   console.log(err.name, err.message);
   process.exit(1);
@@ -23,7 +23,7 @@ const DB = process.env.DATABASE.replace(
 
 mongoose.connect(DB, {
   useUnifiedTopology: true,
-  useNewUrlParser: true
+  useNewUrlParser: true,
 });
 
 const port = process.env.PORT || 3000;
@@ -31,7 +31,7 @@ const server = app.listen(port, () => {
   console.log(`App running on port ${port}...`);
 });
 
-process.on('unhandledRejection', err => {
+process.on('unhandledRejection', (err) => {
   console.log('UNHANDLED REJECTION! 💥 Shutting down...');
   console.log(err.name, err.message);
   server.close(() => {
@@ -39,19 +39,22 @@ process.on('unhandledRejection', err => {
   });
 });
 
-const io = socketio(server, {
-  cors: {
-    origin: 'https://date-app-praca-inzynierska.netlify.app',
-    methods: ['GET', 'POST']
+const io = socketio(
+  server,
+  process.env.NODE_ENV === 'production' && {
+    cors: {
+      origin: 'https://date-app-praca-inzynierska.netlify.app',
+      methods: ['GET', 'POST'],
+    },
   }
-});
+);
 const onlineUsers = new Map();
 
-io.on('connection', socket => {
-  socket.on('add-user', userId => onlineUsers.set(userId, socket.id));
+io.on('connection', (socket) => {
+  socket.on('add-user', (userId) => onlineUsers.set(userId, socket.id));
 });
 
-Match.watch().on('change', async data => {
+Match.watch().on('change', async (data) => {
   if (
     !(
       data.operationType === 'update' &&
@@ -66,7 +69,7 @@ Match.watch().on('change', async data => {
         ({ status }) => status === 'left' || status === 'right'
       )
     ) {
-      const message = id => {
+      const message = (id) => {
         if (match.statuses.every(({ status }) => status === 'match')) {
           return 'Masz nowe dopasowanie';
         }
@@ -87,7 +90,7 @@ Match.watch().on('change', async data => {
         if (sendUserSocket) {
           io.to(sendUserSocket).emit('match-status', {
             text: message(user),
-            users: match.statuses.map(({ user: matchUser }) => matchUser)
+            users: match.statuses.map(({ user: matchUser }) => matchUser),
           });
         }
       });
@@ -95,7 +98,7 @@ Match.watch().on('change', async data => {
   }
 });
 
-Message.watch().on('change', async data => {
+Message.watch().on('change', async (data) => {
   if (data.operationType === 'insert') {
     const sendUserSocket = onlineUsers.get(
       data.fullDocument.receiver.toString()
@@ -106,9 +109,9 @@ Message.watch().on('change', async data => {
     const unreadMessages = await Message.countDocuments({
       $and: [
         { sender: data.fullDocument.sender },
-        { reciver: data.fullDocument.reciver },
-        { receiverRead: { $ne: true } }
-      ]
+        { receiver: data.fullDocument.receiver },
+        { receiverRead: { $ne: true } },
+      ],
     });
 
     if (sendUserSocket) {
@@ -116,7 +119,7 @@ Message.watch().on('change', async data => {
         sender: data.fullDocument.sender,
         text: `${name} ${surname} wysyła ci wiadomość ${
           unreadMessages > 1 ? `(${unreadMessages})` : ''
-        }`
+        }`,
       });
     }
   }

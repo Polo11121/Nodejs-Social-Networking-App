@@ -6,65 +6,65 @@ const bcrypt = require('bcryptjs');
 const pointSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['Point']
+    enum: ['Point'],
   },
   coordinates: {
-    type: [Number]
-  }
+    type: [Number],
+  },
 });
 
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Please tell us your name']
+      required: [true, 'Please tell us your name'],
     },
     surname: {
       type: String,
-      required: [true, 'Please tell us your surname']
+      required: [true, 'Please tell us your surname'],
     },
     email: {
       type: String,
       required: [true, 'Please provide your email'],
       unique: [true, 'Please provide unique email'],
       lowercase: true,
-      validate: [validator.isEmail, 'Please provide a valid email']
+      validate: [validator.isEmail, 'Please provide a valid email'],
     },
     role: {
       type: String,
       enum: ['user', 'admin'],
       default: 'user',
-      select: 0
+      select: 0,
     },
     profileImage: {
       type: String,
       default:
-        'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg'
+        'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg',
     },
     backgroundImage: {
       type: String,
-      default: ''
+      default: '',
     },
     description: { type: String, default: '' },
     contactEmail: {
       type: String,
-      default: ''
+      default: '',
     },
     address: { default: '', type: String },
     phoneNumber: { default: '', type: String, maxLength: 9 },
     interestedGenders: {
       type: String,
       default: '',
-      enum: ['males', 'females', 'femalesAndMales', '']
+      enum: ['males', 'females', 'femalesAndMales', ''],
     },
     gender: {
       required: [true, 'Please provide your gender'],
       type: String,
-      enum: ['male', 'female']
+      enum: ['male', 'female'],
     },
     hobbies: {
       type: [{ text: String, icon: String }],
-      default: []
+      default: [],
     },
     workPlace: { type: String, default: '' },
     middleSchool: { type: String, default: '' },
@@ -72,22 +72,22 @@ const userSchema = new mongoose.Schema(
     home: {
       type: mongoose.Schema.ObjectId,
       ref: 'City',
-      required: false
+      required: false,
     },
     childCity: {
       type: mongoose.Schema.ObjectId,
       ref: 'City',
-      required: false
+      required: false,
     },
     cities: {
       type: [mongoose.Schema.ObjectId],
       ref: 'City',
       required: false,
-      default: []
+      default: [],
     },
     birthDate: {
       required: [true, 'Please provide your birth date'],
-      type: Date
+      type: Date,
     },
     matchStatus: {
       type: [
@@ -95,41 +95,41 @@ const userSchema = new mongoose.Schema(
           user: { type: mongoose.Schema.ObjectId, ref: 'User' },
           status: {
             type: String,
-            enum: ['left', 'right', 'match', 'request', 'reject', 'none']
-          }
-        }
+            enum: ['left', 'right', 'match', 'request', 'reject', 'none'],
+          },
+        },
       ],
-      required: false
+      required: false,
     },
     filters: {
       interestedGenders: String,
       interestedAge: String,
       interestedCityMaxDistance: {
         type: String,
-        enum: ['0', '10', '50', '100', '200', '300']
+        enum: ['0', '10', '50', '100', '200', '300'],
       },
       interestedCity: { type: mongoose.Schema.ObjectId, ref: 'City' },
-      required: false
+      required: false,
     },
     password: {
       type: String,
       required: [true, 'Please provide a password'],
       minlength: 8,
-      select: false
+      select: false,
     },
     passwordConfirm: {
       type: String,
       required: [true, 'Please confirm your password'],
       validate: {
-        validator: function(el) {
+        validator: function (el) {
           return el === this.password;
         },
-        message: 'Passwords are not the same!'
-      }
+        message: 'Passwords are not the same!',
+      },
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'noConfirmation', 'blocked']
+      enum: ['active', 'inactive', 'noConfirmation', 'blocked'],
     },
     accountConfirmedToken: { type: String, select: false },
     passwordChangedAt: { type: Date, select: false },
@@ -139,14 +139,14 @@ const userSchema = new mongoose.Schema(
     emailResetExpires: { type: Date, select: false },
     newEmail: {
       type: String,
-      select: false
+      select: false,
     },
-    random_point: { type: pointSchema, index: '2dsphere', select: false }
+    random_point: { type: pointSchema, index: '2dsphere', select: false },
   },
   {
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-    timestamps: true
+    timestamps: true,
   }
 );
 
@@ -155,10 +155,10 @@ userSchema.index({ random_point: '2dsphere' });
 userSchema.virtual('posts', {
   ref: 'Post',
   foreignField: 'user',
-  localField: '_id'
+  localField: '_id',
 });
 
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
   }
@@ -169,7 +169,7 @@ userSchema.pre('save', async function(next) {
   next();
 });
 
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
   if (!this.isModified('password') || this.isNew) {
     return next();
   }
@@ -179,14 +179,14 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-userSchema.methods.correctPassword = async function(
+userSchema.methods.correctPassword = async function (
   candidatePassword,
   userPassword
 ) {
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 
-userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
+userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   if (this.passwordChangedAt) {
     const changedTimestamp = parseInt(
       this.passwordChangedAt.getTime() / 1000,
@@ -199,7 +199,7 @@ userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
   return false;
 };
 
-userSchema.methods.createPasswordResetToken = function() {
+userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
 
   this.passwordResetToken = crypto
@@ -212,7 +212,7 @@ userSchema.methods.createPasswordResetToken = function() {
   return resetToken;
 };
 
-userSchema.methods.createEmailResetToken = function() {
+userSchema.methods.createEmailResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
 
   this.emailResetToken = crypto
