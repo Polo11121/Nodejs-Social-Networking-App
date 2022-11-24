@@ -83,7 +83,9 @@ exports.signup = catchAsync(async (req, res, next) => {
       random_point: { type: 'Point', coordinates: [Math.random(), 0] },
     });
 
-    const resetURL = `http://localhost:3000/confirm-account/${token}`;
+    const resetURL = `${
+      process.env.APP_URL || 'http://localhost:3000'
+    }/confirm-account/${token}`;
 
     const message = `Witaj, ${newUser.name}!\nNiedawno zarejestrował${
       newUser.gender === 'male' ? 'eś' : 'aś'
@@ -203,7 +205,9 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    const resetURL = `http://localhost:3000/reset-password/${resetToken}`;
+    const resetURL = `${
+      process.env.APP_URL || 'http://localhost:3000'
+    }/reset-password/${resetToken}`;
     const message = `Witaj, ${user.name}!\nOtrzymaliśmy prośbę dotyczącą zresetowania Twojego hasła na DATE-APP.\nAby zresetować hasło kliknij w poniższy link.\n(Link jest aktywny przez kolejne 10 minut)\n${resetURL}`;
 
     await sendEmail({
@@ -248,7 +252,9 @@ exports.changeEmail = catchAsync(async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    const resetURL = `http://localhost:3000/change-email/${resetToken}`;
+    const resetURL = `${
+      process.env.APP_URL || 'http://localhost:3000'
+    }/change-email/${resetToken}`;
     const message = `Witaj, ${user.name}!\nOtrzymaliśmy prośbę dotyczącą zmiany adresu e-mail na DATE-APP.\nAby zmienić e-mail kliknij w poniższy link.\n(Link jest aktywny przez kolejne 10 minut)\n${resetURL}`;
 
     await sendEmail({
