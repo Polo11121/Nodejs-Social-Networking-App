@@ -240,6 +240,12 @@ exports.changeEmail = catchAsync(async (req, res, next) => {
     email: req.body.email,
   });
 
+  if (req.body.email === req.user.email) {
+    return next(
+      new AppError('Nowy adres e-mail musi być inny niż obecnie używany', 401)
+    );
+  }
+
   if (isEmailUsed) {
     return next(new AppError('Ten adres e-mail jest już używany', 401));
   }
@@ -417,7 +423,11 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
 
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-  const currentUser = await User.findById(decoded.id, { id: 1, role: 1 });
+  const currentUser = await User.findById(decoded.id, {
+    id: 1,
+    role: 1,
+    email: 1,
+  });
 
   if (!currentUser) {
     return next(new AppError('Konto z tym tokenem nie istnieje.', 401));
