@@ -212,7 +212,8 @@ exports.getUser = catchAsync(async (req, res, next) => {
 });
 
 exports.getUsers = catchAsync(async (req, res, next) => {
-  const splittedSearchTerm = req.query.searchTerm.trim().split(' ');
+  const trimmedSearchTerm = req.query.searchTerm.trim();
+  const splittedSearchTerm = trimmedSearchTerm.split(' ');
 
   const users = await User.find(
     {
@@ -225,7 +226,7 @@ exports.getUsers = catchAsync(async (req, res, next) => {
                 $regex:
                   splittedSearchTerm.length === 2
                     ? splittedSearchTerm[0]
-                    : req.query.searchTerm,
+                    : trimmedSearchTerm,
                 $options: 'i',
               },
             },
@@ -234,7 +235,7 @@ exports.getUsers = catchAsync(async (req, res, next) => {
                 $regex:
                   splittedSearchTerm.length === 2
                     ? splittedSearchTerm[1]
-                    : req.query.searchTerm,
+                    : trimmedSearchTerm,
                 $options: 'i',
               },
             },

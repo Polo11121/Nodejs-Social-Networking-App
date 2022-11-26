@@ -39,7 +39,10 @@ exports.getDashboardCounters = catchAsync(async (req, res) => {
 
 exports.getUsers = catchAsync(async (req, res) => {
   const { searchTerm, status } = req.query;
-  const splittedSearchTerm = searchTerm && searchTerm.trim().split(' ');
+  const trimmedSearchTerm = searchTerm.trim();
+
+  const splittedSearchTerm =
+    trimmedSearchTerm && trimmedSearchTerm.trim().split(' ');
 
   const filters = [{ role: 'user' }, ...(status ? [{ status }] : [])];
 
@@ -54,13 +57,13 @@ exports.getUsers = catchAsync(async (req, res) => {
                 $regex:
                   splittedSearchTerm.length === 2
                     ? splittedSearchTerm[0]
-                    : searchTerm,
+                    : trimmedSearchTerm,
                 $options: 'i',
               },
             },
             {
               email: {
-                $regex: searchTerm,
+                $regex: trimmedSearchTerm,
                 $options: 'i',
               },
             },
@@ -69,7 +72,7 @@ exports.getUsers = catchAsync(async (req, res) => {
                 $regex:
                   splittedSearchTerm.length === 2
                     ? splittedSearchTerm[1]
-                    : searchTerm,
+                    : trimmedSearchTerm,
                 $options: 'i',
               },
             },

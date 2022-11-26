@@ -133,7 +133,7 @@ Report.watch().on('change', async (data) => {
     administrators.forEach(({ id }) => {
       const sendAdminSocket = onlineUsers.get(id.toString());
 
-      if (sendAdminSocket) {
+      if (sendAdminSocket && data.fullDocument.reportedUser !== id) {
         io.to(sendAdminSocket).emit('new-report');
       }
     });
