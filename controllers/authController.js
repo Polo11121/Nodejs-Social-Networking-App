@@ -162,7 +162,7 @@ exports.login = catchAsync(async (req, res, next) => {
   if (user && user.status === 'blocked') {
     return next(
       new AppError(
-        'Konto z podanym adresem e-mail zostało zablokowane, sprawdź skrzynkę pocztową',
+        'Konto z podanym adresem e-mail zostało zablokowane, po więcej informacji sprawdź skrzynkę pocztową',
         401
       )
     );

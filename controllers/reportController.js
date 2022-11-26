@@ -118,7 +118,7 @@ exports.getReports = catchAsync(async (req, res) => {
         $or: [
           {
             reportId: {
-              $regex: searchTerm,
+              $regex: searchTerm.trim(),
               $options: 'i',
             },
           },
@@ -140,7 +140,7 @@ exports.getReports = catchAsync(async (req, res) => {
     })
     .sort({ createdAt: -1 });
 
-  const results = (await query.clone).length;
+  const results = (await query.clone()).length;
 
   const features = new APIFeatures(query, req.query, results).paginate();
 

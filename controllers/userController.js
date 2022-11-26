@@ -212,7 +212,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
 });
 
 exports.getUsers = catchAsync(async (req, res, next) => {
-  const splittedSearchTerm = req.query.searchTerm.split(' ');
+  const splittedSearchTerm = req.query.searchTerm.trim().split(' ');
 
   const users = await User.find(
     {

@@ -70,7 +70,7 @@ exports.getUsers = catchAsync(async (req, res) => {
 
   const citiesIds = cities.map(({ _id }) => ObjectId(_id));
 
-  const filterQuery = () => {
+  const filterQuery = (all = true) => {
     const filters = [
       { _id: { $ne: req.user.id } },
       {
@@ -86,7 +86,7 @@ exports.getUsers = catchAsync(async (req, res) => {
       { status: 'active' },
     ];
 
-    if (swipedUsersIds.length) {
+    if (swipedUsersIds.length && all) {
       filters.push({ _id: { $nin: swipedUsersIds } });
     }
 
@@ -128,13 +128,16 @@ exports.getUsers = catchAsync(async (req, res) => {
     path: 'home',
     select: 'city location',
   });
-
-  const results = (await query.clone()).length;
-  const features = new APIFeatures(query, req.query, results).paginate();
+  const queryLength = (await query.clone()).length;
+  const features = new APIFeatures(query, req.query, queryLength).paginate();
 
   const users = await features.query;
 
   const { hasNextPage } = await features;
+
+  const results = await User.count({
+    $and: filterQuery(false),
+  });
 
   res.status(200).json({
     status: 'success',
