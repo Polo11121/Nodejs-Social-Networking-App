@@ -39,7 +39,7 @@ exports.getDashboardCounters = catchAsync(async (req, res) => {
 
 exports.getUsers = catchAsync(async (req, res) => {
   const { searchTerm, status } = req.query;
-  const splittedSearchTerm = searchTerm && searchTerm.split(' ');
+  const splittedSearchTerm = searchTerm && searchTerm.trim().split(' ');
 
   const filters = [{ role: 'user' }, ...(status ? [{ status }] : [])];
 

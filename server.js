@@ -4,6 +4,7 @@ const socketio = require('socket.io');
 
 const Message = require('./models/messageModel');
 const Match = require('./models/matchModel');
+const Report = require('./models/reportModel');
 const User = require('./models/userModel');
 
 process.on('uncaughtException', (err) => {
@@ -121,6 +122,33 @@ Message.watch().on('change', async (data) => {
           unreadMessages > 1 ? `(${unreadMessages})` : ''
         }`,
       });
+    }
+  }
+});
+
+Report.watch().on('change', async (data) => {
+  if (data.operationType === 'insert') {
+    const administrators = await User.find({ role: 'admin' }).select({ id: 1 });
+
+    administrators.forEach(({ id }) => {
+      const sendAdminSocket = onlineUsers.get(id.toString());
+
+      if (sendAdminSocket) {
+        io.to(sendAdminSocket).emit('new-report');
+      }
+    });
+  }
+
+  if (
+    data.operationType === 'update' &&
+    data.updateDescription.updatedFields.reportSolution ===
+      'closeReportAndBlockUser'
+  ) {
+    const report = await Report.findById(data.documentKey._id);
+    const sendUserSocket = onlineUsers.get(report.reportedUser.toString());
+
+    if (sendUserSocket) {
+      io.to(sendUserSocket).emit('user-blocked');
     }
   }
 });
