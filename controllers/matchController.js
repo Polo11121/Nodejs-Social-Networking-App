@@ -8,6 +8,7 @@ const Match = require('../models/matchModel');
 // eslint-disable-next-line
 const ObjectId = require('mongodb').ObjectId;
 const APIFeatures = require('../utils/apiFeatures');
+const images = require('../utils/images');
 
 exports.getUsers = catchAsync(async (req, res) => {
   const {
@@ -133,6 +134,10 @@ exports.getUsers = catchAsync(async (req, res) => {
 
   const users = await features.query;
 
+  for (const user of users) {
+    user.profileImage = await images.getImage(user.profileImage);
+  }
+
   const { hasNextPage } = await features;
 
   const results = await User.count({
@@ -205,6 +210,10 @@ exports.getMatches = catchAsync(async (req, res) => {
     match: match.statuses[0].user,
     status: match.statuses[0].status,
   }));
+
+  for (const match of allMatches) {
+    match.match.profileImage = await images.getImage(match.match.profileImage);
+  }
 
   res.status(200).json({
     status: 'success',

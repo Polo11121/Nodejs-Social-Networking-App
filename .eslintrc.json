@@ -9,6 +9,8 @@
       }
     ],
     "spaced-comment": "off",
+    "no-await-in-loop": "off",
+    "no-restricted-syntax": "off",
     "no-console": "warn",
     "consistent-return": "off",
     "func-names": "off",
