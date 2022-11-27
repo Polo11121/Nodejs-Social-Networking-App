@@ -22,7 +22,7 @@ exports.resizeMessagePhotos = catchAsync(async (req, res, next) => {
 
         await images.sendImage(buffer, filename);
 
-        req.body.images.push(filename);
+        req.body.images.push(images.getImage(filename));
       })
     );
   }
@@ -64,17 +64,11 @@ exports.getLastMessages = catchAsync(async (req, res) => {
   );
 
   const matchesWithLastMessage = await Promise.all(
-    matches.map(async (match, index) => {
-      match.statuses[0].user.profileImage = await images.getImage(
-        match.statuses[0].user.profileImage
-      );
-
-      return {
-        _id: match._id,
-        match: match.statuses[0].user,
-        lastMessage: lastMessages[index],
-      };
-    })
+    matches.map(async (match, index) => ({
+      _id: match._id,
+      match: match.statuses[0].user,
+      lastMessage: lastMessages[index],
+    }))
   );
 
   res.status(200).json({
@@ -120,19 +114,6 @@ exports.getAllMessages = catchAsync(async (req, res) => {
 
   const messages = await features.query;
   const { hasNextPage } = features;
-
-  for (const message of messages) {
-    const awsImages = [];
-
-    for (const image of message.images) {
-      awsImages.push(await images.getImage(image));
-    }
-
-    message.sender.profileImage = await images.getImage(
-      message.sender.profileImage
-    );
-    message.images = awsImages;
-  }
 
   res.status(200).json({ status: 'success', hasNextPage, data: messages });
 });
