@@ -1,44 +1,31 @@
 const sharp = require('sharp');
-const multer = require('multer');
 const catchAsync = require('../utils/catchAsync');
 
 const Post = require('../models/postModel');
 
 const AppError = require('../utils/appError');
 
-const multerStorage = multer.memoryStorage();
+const images = require('../utils/images');
 
-const multerFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image')) {
-    cb(null, true);
-  } else {
-    cb(new AppError('Proszę przesłać zdjęcie!', 400), false);
-  }
-};
-
-const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
-
-exports.uploadPostPhotos = upload.array('images');
+exports.uploadPostPhotos = images.upload.array('images');
 
 exports.resizePostPhotos = catchAsync(async (req, res, next) => {
   if (req.files.length) {
     req.body.images = [];
 
     await Promise.all(
-      req.files.map(async (file, i) => {
-        const imagesPath = 'public/img/posts';
-        const filename = `post-${req.user.id}-${Date.now()}-image-${
-          i + 1
-        }.jpeg`;
+      req.files.map(async (file) => {
+        const filename = images.randomImageName();
 
-        await sharp(file.buffer)
-          .toFormat('jpeg')
-          .toFile(`${imagesPath}/${filename}`);
+        const buffer = await sharp(file.buffer).toFormat('jpeg').toBuffer();
 
-        req.body.images.push(`${imagesPath}/${filename}`);
+        await images.sendImage(buffer, filename);
+
+        req.body.images.push(filename);
       })
     );
   }
+
   next();
 });
 

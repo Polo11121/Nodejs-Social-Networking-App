@@ -1,43 +1,28 @@
-const multer = require('multer');
 const sharp = require('sharp');
 
-const multerStorage = multer.memoryStorage();
 const catchAsync = require('../utils/catchAsync');
 
 const Message = require('../models/messageModel');
 const Match = require('../models/matchModel');
 
-const AppError = require('../utils/appError');
 const APIFeatures = require('../utils/apiFeatures');
+const images = require('../utils/images');
 
-const multerFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image')) {
-    cb(null, true);
-  } else {
-    cb(new AppError('Proszę przesłać zdjęcie!', 400), false);
-  }
-};
-
-const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
-
-exports.uploadMessagePhotos = upload.array('images');
+exports.uploadMessagePhotos = images.upload.array('images');
 
 exports.resizeMessagePhotos = catchAsync(async (req, res, next) => {
   if (req.files.length) {
     req.body.images = [];
 
     await Promise.all(
-      req.files.map(async (file, i) => {
-        const imagesPath = 'public/img/messages';
-        const filename = `message-${req.user.id}-${Date.now()}-image-${
-          i + 1
-        }.jpeg`;
+      req.files.map(async (file) => {
+        const filename = images.randomImageName();
 
-        await sharp(file.buffer)
-          .toFormat('jpeg')
-          .toFile(`${imagesPath}/${filename}`);
+        const buffer = await sharp(file.buffer).toFormat('jpeg').toBuffer();
 
-        req.body.images.push(`${imagesPath}/${filename}`);
+        await images.sendImage(buffer, filename);
+
+        req.body.images.push(filename);
       })
     );
   }
@@ -78,11 +63,19 @@ exports.getLastMessages = catchAsync(async (req, res) => {
     })
   );
 
-  const matchesWithLastMessage = matches.map((match, index) => ({
-    _id: match._id,
-    match: match.statuses[0].user,
-    lastMessage: lastMessages[index],
-  }));
+  const matchesWithLastMessage = await Promise.all(
+    matches.map(async (match, index) => {
+      match.statuses[0].user.profileImage = await images.getImage(
+        match.statuses[0].user.profileImage
+      );
+
+      return {
+        _id: match._id,
+        match: match.statuses[0].user,
+        lastMessage: lastMessages[index],
+      };
+    })
+  );
 
   res.status(200).json({
     status: 'success',
@@ -127,6 +120,19 @@ exports.getAllMessages = catchAsync(async (req, res) => {
 
   const messages = await features.query;
   const { hasNextPage } = features;
+
+  for (const message of messages) {
+    const awsImages = [];
+
+    for (const image of message.images) {
+      awsImages.push(await images.getImage(image));
+    }
+
+    message.sender.profileImage = await images.getImage(
+      message.sender.profileImage
+    );
+    message.images = awsImages;
+  }
 
   res.status(200).json({ status: 'success', hasNextPage, data: messages });
 });
