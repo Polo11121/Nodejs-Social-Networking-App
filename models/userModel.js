@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema(
     profileImage: {
       type: String,
       default:
-        'https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg',
+        '1c76070c27c94ff7b430675906ec3db0ecac11b0fdb9dee83fa81a4c08e6901f',
     },
     backgroundImage: {
       type: String,
