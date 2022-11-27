@@ -96,10 +96,6 @@ exports.getUsers = catchAsync(async (req, res) => {
 
   const users = await features.query;
 
-  for (const user of users) {
-    user.profileImage = await images.getImage(user.profileImage);
-  }
-
   const { hasNextPage } = await features;
 
   res.status(200).json({
@@ -148,12 +144,6 @@ exports.getAdministrators = catchAsync(async (req, res) => {
       createdAt: 1,
     }
   );
-
-  for (const administrator of administrators) {
-    administrator.profileImage = await images.getImage(
-      administrator.profileImage
-    );
-  }
 
   res.status(200).json({
     status: 'success',

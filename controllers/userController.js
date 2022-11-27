@@ -16,21 +16,23 @@ exports.uploadUserPhotos = images.upload.fields([
 
 exports.resizeUserProfilePhotos = catchAsync(async (req, res, next) => {
   if (req.files && req.files.profileImage) {
-    req.files.profileImage[0].filename = images.randomImageName();
+    const filename = images.randomImageName();
+    req.files.profileImage[0].filename = images.getImage(filename);
 
     const buffer = await sharp(req.files.profileImage[0].buffer)
       .toFormat('jpeg')
       .toBuffer();
 
-    await images.sendImage(buffer, req.files.profileImage[0].filename);
+    await images.sendImage(buffer, filename);
   } else if (req.files && req.files.backgroundImage) {
-    req.files.backgroundImage[0].filename = images.randomImageName();
+    const filename = images.randomImageName();
+    req.files.backgroundImage[0].filename = images.getImage(filename);
 
     const buffer = await sharp(req.files.backgroundImage[0].buffer)
       .toFormat('jpeg')
       .toBuffer();
 
-    await images.sendImage(buffer, req.files.backgroundImage[0].filename);
+    await images.sendImage(buffer, filename);
   }
 
   next();
@@ -117,8 +119,6 @@ exports.getUser = catchAsync(async (req, res, next) => {
       return next(new AppError('Nie znaleziono takiego użytkownika', 404));
     }
 
-    user.profileImage = await images.getImage(user.profileImage);
-
     res.status(200).json({
       status: 'success',
       data: user,
@@ -158,19 +158,6 @@ exports.getUser = catchAsync(async (req, res, next) => {
   if (!user) {
     return next(new AppError('Nie znaleziono takiego użytkownika', 404));
   }
-
-  for (const [i, post] of user.posts.entries()) {
-    const awsImages = [];
-
-    for (const image of post.images) {
-      awsImages.push(await images.getImage(image));
-    }
-
-    user.posts[i].images = awsImages;
-  }
-
-  user.backgroundImage = await images.getImage(user.backgroundImage);
-  user.profileImage = await images.getImage(user.profileImage);
 
   if (req.params.id !== req.user.id) {
     const match = await Match.findOne({
@@ -249,10 +236,6 @@ exports.getUsers = catchAsync(async (req, res, next) => {
     },
     { name: 1, surname: 1, profileImage: 1 }
   ).limit(5);
-
-  for (const user of users) {
-    user.profileImage = await images.getImage(user.profileImage);
-  }
 
   res.status(200).json({
     status: 'success',

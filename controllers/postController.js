@@ -21,7 +21,7 @@ exports.resizePostPhotos = catchAsync(async (req, res, next) => {
 
         await images.sendImage(buffer, filename);
 
-        req.body.images.push(filename);
+        req.body.images.push(images.getImage(filename));
       })
     );
   }

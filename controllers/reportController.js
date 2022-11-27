@@ -38,21 +38,6 @@ exports.getNewReports = catchAsync(async (req, res) => {
     })
     .sort({ createdAt: -1 });
 
-  for (const report of reports) {
-    if (report.admin) {
-      report.admin.profileImage = await images.getImage(
-        report.admin.profileImage
-      );
-    }
-
-    report.reportedUser.profileImage = await images.getImage(
-      report.reportedUser.profileImage
-    );
-    report.reportingUser.profileImage = await images.getImage(
-      report.reportingUser.profileImage
-    );
-  }
-
   res.status(200).json({
     status: 'success',
     data: reports,
@@ -162,21 +147,6 @@ exports.getReports = catchAsync(async (req, res) => {
 
   const reports = await features.query;
 
-  for (const report of reports) {
-    if (report.admin) {
-      report.admin.profileImage = await images.getImage(
-        report.admin.profileImage
-      );
-    }
-
-    report.reportedUser.profileImage = await images.getImage(
-      report.reportedUser.profileImage
-    );
-    report.reportingUser.profileImage = await images.getImage(
-      report.reportingUser.profileImage
-    );
-  }
-
   const { hasNextPage } = await features;
 
   res.status(200).json({
@@ -202,21 +172,6 @@ exports.getUserReports = catchAsync(async (req, res) => {
       select: 'name surname profileImage',
     })
     .sort({ createdAt: -1 });
-
-  for (const report of reports) {
-    if (report.admin) {
-      report.admin.profileImage = await images.getImage(
-        report.admin.profileImage
-      );
-    }
-
-    report.reportedUser.profileImage = await images.getImage(
-      report.reportedUser.profileImage
-    );
-    report.reportingUser.profileImage = await images.getImage(
-      report.reportingUser.profileImage
-    );
-  }
 
   res.status(200).json({
     status: 'success',

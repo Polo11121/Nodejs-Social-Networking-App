@@ -1,11 +1,6 @@
 const multer = require('multer');
 const crypto = require('crypto');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const {
-  S3Client,
-  GetObjectCommand,
-  PutObjectCommand,
-} = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const AppError = require('./appError');
 
@@ -39,15 +34,6 @@ exports.sendImage = (imageBuffer, imageName) => {
   return s3.send(command);
 };
 
-exports.getImage = (imageName) => {
-  const command = new GetObjectCommand({
-    Bucket: process.env.BUCKET_NAME,
-    Key: imageName,
-  });
-
-  return getSignedUrl(s3, command, {
-    expiresIn: 3600,
-  });
-};
+exports.getImage = (imageName) => `${process.env.BUCKET_URL}/${imageName}`;
 
 exports.randomImageName = () => crypto.randomBytes(32).toString('hex');
