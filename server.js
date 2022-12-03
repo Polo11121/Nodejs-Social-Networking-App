@@ -7,29 +7,28 @@ const Match = require('./models/matchModel');
 const Report = require('./models/reportModel');
 const User = require('./models/userModel');
 
-process.on('uncaughtException', (err) => {
-  console.log('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-  console.log(err.name, err.message);
-  process.exit(1);
-});
+const app = require('./app');
 
 dotenv.config();
-
-const app = require('./app');
 
 const DB = process.env.DATABASE.replace(
   '<PASSWORD>',
   process.env.DATABASE_PASSWORD
 );
+const port = process.env.PORT || 3000;
+const server = app.listen(port, () => {
+  console.log(`App running on port ${port}...`);
+});
 
 mongoose.connect(DB, {
   useUnifiedTopology: true,
   useNewUrlParser: true,
 });
 
-const port = process.env.PORT || 3000;
-const server = app.listen(port, () => {
-  console.log(`App running on port ${port}...`);
+process.on('uncaughtException', (err) => {
+  console.log('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.log(err.name, err.message);
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (err) => {
@@ -106,7 +105,6 @@ Message.watch().on('change', async (data) => {
     );
 
     const { name, surname } = await User.findById(data.fullDocument.sender);
-
     const unreadMessages = await Message.countDocuments({
       $and: [
         { sender: data.fullDocument.sender },

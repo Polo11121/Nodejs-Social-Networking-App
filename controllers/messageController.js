@@ -1,16 +1,15 @@
 const sharp = require('sharp');
 
-const catchAsync = require('../utils/catchAsync');
-
 const Message = require('../models/messageModel');
 const Match = require('../models/matchModel');
 
 const APIFeatures = require('../utils/apiFeatures');
+const catchAsync = require('../utils/catchAsync');
 const images = require('../utils/images');
 
 exports.uploadMessagePhotos = images.upload.array('images');
 
-exports.resizeMessagePhotos = catchAsync(async (req, res, next) => {
+exports.formatMessagePhotos = catchAsync(async (req, res, next) => {
   if (req.files.length) {
     req.body.images = [];
 
@@ -111,7 +110,6 @@ exports.getAllMessages = catchAsync(async (req, res) => {
 
   const results = (await query.clone()).length;
   const features = new APIFeatures(query, req.query, results).paginate();
-
   const messages = await features.query;
   const { hasNextPage } = features;
 

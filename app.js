@@ -43,7 +43,6 @@ app.use(mongoSanitize());
 app.use(xss());
 app.use('/api', limiter);
 app.use(express.json({ limit: '10kb' }));
-app.use('*/public/img/', express.static('public/img/'));
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
   next();

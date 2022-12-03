@@ -1,6 +1,6 @@
-const catchAsync = require('../utils/catchAsync');
-
 const City = require('../models/cityModel');
+
+const catchAsync = require('../utils/catchAsync');
 
 exports.getCities = catchAsync(async (req, res) => {
   const cities = await City.find({

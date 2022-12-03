@@ -1,4 +1,5 @@
 const express = require('express');
+
 const messageController = require('../controllers/messageController');
 const authController = require('../controllers/authController');
 
@@ -10,7 +11,7 @@ router
   .route('/')
   .post(
     messageController.uploadMessagePhotos,
-    messageController.resizeMessagePhotos,
+    messageController.formatMessagePhotos,
     messageController.addMessage
   );
 

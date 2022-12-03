@@ -1,12 +1,10 @@
-const catchAsync = require('../utils/catchAsync');
-const sendEmail = require('../utils/email');
-
 const Report = require('../models/reportModel');
 const User = require('../models/userModel');
 
 const APIFeatures = require('../utils/apiFeatures');
 const AppError = require('../utils/appError');
-const images = require('../utils/images');
+const catchAsync = require('../utils/catchAsync');
+const sendEmail = require('../utils/email');
 
 exports.getDashboardCounters = catchAsync(async (req, res) => {
   const allReports = await Report.countDocuments();
@@ -93,9 +91,7 @@ exports.getUsers = catchAsync(async (req, res) => {
 
   const results = (await query.clone()).length;
   const features = new APIFeatures(query, req.query, results).paginate();
-
   const users = await features.query;
-
   const { hasNextPage } = await features;
 
   res.status(200).json({

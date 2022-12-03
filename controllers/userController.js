@@ -1,20 +1,19 @@
 const sharp = require('sharp');
 
-const catchAsync = require('../utils/catchAsync');
-
 const User = require('../models/userModel');
 const Post = require('../models/postModel');
 const Match = require('../models/matchModel');
 
-const images = require('../utils/images');
 const AppError = require('../utils/appError');
+const catchAsync = require('../utils/catchAsync');
+const images = require('../utils/images');
 
 exports.uploadUserPhotos = images.upload.fields([
   { name: 'profileImage' },
   { name: 'backgroundImage' },
 ]);
 
-exports.resizeUserProfilePhotos = catchAsync(async (req, res, next) => {
+exports.formatUserProfilePhotos = catchAsync(async (req, res, next) => {
   if (req.files && req.files.profileImage) {
     const filename = images.randomImageName();
     req.files.profileImage[0].filename = images.getImage(filename);
@@ -38,66 +37,31 @@ exports.resizeUserProfilePhotos = catchAsync(async (req, res, next) => {
   next();
 });
 
-const filterObj = (obj, ...allowedFields) => {
-  const newObj = {};
-  Object.keys(obj).forEach((el) => {
-    if (allowedFields.includes(el)) newObj[el] = obj[el];
-  });
-
-  return newObj;
-};
-
 exports.updateUser = catchAsync(async (req, res, next) => {
-  const interestedBody = filterObj(
-    req.body,
-    'interestedGenders',
-    'birthDate',
-    'description',
-    'name',
-    'surname',
-    'contactEmail',
-    'email',
-    'hobbies',
-    'workPlace',
-    'middleSchool',
-    'upperSchool',
-    'home',
-    'gender',
-    'phoneNumber',
-    'childCity',
-    'cities',
-    'address',
-    'filters'
-  );
-
   if (req.files && req.files.profileImage) {
-    interestedBody.profileImage = req.files.profileImage[0].filename;
+    req.body.profileImage = req.files.profileImage[0].filename;
 
     await Post.create({
       type: 'profile',
       user: req.user.id,
-      images: [interestedBody.profileImage],
+      images: [req.body.profileImage],
       description: 'Zaktualizowano zdjęcie profilowe',
     });
   } else if (req.files && req.files.backgroundImage) {
-    interestedBody.backgroundImage = req.files.backgroundImage[0].filename;
+    req.body.backgroundImage = req.files.backgroundImage[0].filename;
 
     await Post.create({
       type: 'background',
       user: req.user.id,
-      images: [interestedBody.backgroundImage],
+      images: [req.body.backgroundImage],
       description: 'Zaktualizowano zdjęcie w tle',
     });
   }
 
-  const updatedUser = await User.findByIdAndUpdate(
-    req.user.id,
-    interestedBody,
-    {
-      new: true,
-      runValidators: true,
-    }
-  );
+  const updatedUser = await User.findByIdAndUpdate(req.user.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
 
   res.status(200).json({
     status: 'success',
