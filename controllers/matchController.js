@@ -36,7 +36,7 @@ exports.getUsers = catchAsync(async (req, res) => {
           statuses: {
             $elemMatch: {
               user: { $ne: req.user.id },
-              status: 'reject',
+              status: ['reject', 'request'],
             },
           },
         },
@@ -277,7 +277,12 @@ exports.match = catchAsync(async (req, res) => {
       };
     }
 
-    if (req.body.status === 'reject') {
+    if (
+      req.body.status === 'reject' ||
+      (req.body.status === 'left' &&
+        match.statuses.find(({ user }) => user !== req.user.id).status ===
+          'request')
+    ) {
       return {
         'statuses.$[elem].status': 'reject',
         'statuses.$[elem2].status': 'none',
