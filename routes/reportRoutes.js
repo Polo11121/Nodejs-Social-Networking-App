@@ -1,4 +1,5 @@
 const express = require('express');
+
 const reportController = require('../controllers/reportController');
 const authController = require('../controllers/authController');
 
@@ -14,28 +15,14 @@ router
     reportController.createReport
   );
 
-router.get(
-  '/new',
-  authController.restrictTo('admin'),
-  reportController.getNewReports
-);
+router.use(authController.protect, authController.restrictTo('admin'));
 
-router.get(
-  '/',
-  authController.restrictTo('admin'),
-  reportController.getReports
-);
+router.get('/new', reportController.getNewReports);
 
-router.patch(
-  '/:id',
-  authController.restrictTo('admin'),
-  reportController.updateReport
-);
+router.get('/', reportController.getReports);
 
-router.get(
-  '/user/:id',
-  authController.restrictTo('admin'),
-  reportController.getUserReports
-);
+router.patch('/:id', reportController.updateReport);
+
+router.get('/user/:id', reportController.getUserReports);
 
 module.exports = router;

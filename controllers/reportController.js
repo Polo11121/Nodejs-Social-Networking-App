@@ -1,13 +1,11 @@
-const catchAsync = require('../utils/catchAsync');
-const sendEmail = require('../utils/email');
-
 const Report = require('../models/reportModel');
 const User = require('../models/userModel');
 const Match = require('../models/matchModel');
 
 const APIFeatures = require('../utils/apiFeatures');
 const AppError = require('../utils/appError');
-const images = require('../utils/images');
+const catchAsync = require('../utils/catchAsync');
+const sendEmail = require('../utils/email');
 
 exports.createReport = catchAsync(async (req, res) => {
   const report = await Report.create({
@@ -98,6 +96,10 @@ exports.updateReport = catchAsync(async (req, res, next) => {
     });
   }
 
+  if (!report) {
+    return next(new AppError('Nie znaleziono takiego zgłoszenia', 404));
+  }
+
   res.status(200).json({
     status: 'success',
     data: report,
@@ -142,11 +144,8 @@ exports.getReports = catchAsync(async (req, res) => {
     .sort({ createdAt: -1 });
 
   const results = (await query.clone()).length;
-
   const features = new APIFeatures(query, req.query, results).paginate();
-
   const reports = await features.query;
-
   const { hasNextPage } = await features;
 
   res.status(200).json({

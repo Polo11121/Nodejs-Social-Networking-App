@@ -1,4 +1,5 @@
 const express = require('express');
+
 const userController = require('../controllers/userController');
 const authController = require('../controllers/authController');
 
@@ -29,7 +30,7 @@ router.patch('/deleteUser', authController.deleteUser);
 router.patch(
   '/updateUser',
   userController.uploadUserPhotos,
-  userController.resizeUserProfilePhotos,
+  userController.formatUserProfilePhotos,
   userController.updateUser
 );
 

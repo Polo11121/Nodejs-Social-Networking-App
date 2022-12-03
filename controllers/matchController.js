@@ -1,14 +1,13 @@
-const catchAsync = require('../utils/catchAsync');
-const subtractYears = require('../utils/functions');
+// eslint-disable-next-line
+const ObjectId = require('mongodb').ObjectId;
 
 const City = require('../models/cityModel');
 const User = require('../models/userModel');
 const Match = require('../models/matchModel');
 
-// eslint-disable-next-line
-const ObjectId = require('mongodb').ObjectId;
 const APIFeatures = require('../utils/apiFeatures');
-const images = require('../utils/images');
+const catchAsync = require('../utils/catchAsync');
+const subtractYears = require('../utils/functions');
 
 exports.getUsers = catchAsync(async (req, res) => {
   const {
@@ -129,11 +128,10 @@ exports.getUsers = catchAsync(async (req, res) => {
     path: 'home',
     select: 'city location',
   });
+
   const queryLength = (await query.clone()).length;
   const features = new APIFeatures(query, req.query, queryLength).paginate();
-
   const users = await features.query;
-
   const { hasNextPage } = await features;
 
   const results = await User.count({
@@ -295,6 +293,7 @@ exports.match = catchAsync(async (req, res) => {
         'statuses.$[elem2].new': 'true',
       };
     }
+
     return {
       'statuses.$[elem].status': req.body.status,
       'statuses.$[elem].new': 'false',

@@ -1,15 +1,14 @@
 const sharp = require('sharp');
-const catchAsync = require('../utils/catchAsync');
 
 const Post = require('../models/postModel');
 
 const AppError = require('../utils/appError');
-
+const catchAsync = require('../utils/catchAsync');
 const images = require('../utils/images');
 
 exports.uploadPostPhotos = images.upload.array('images');
 
-exports.resizePostPhotos = catchAsync(async (req, res, next) => {
+exports.formatPostPhotos = catchAsync(async (req, res, next) => {
   if (req.files.length) {
     req.body.images = [];
 
@@ -51,11 +50,15 @@ exports.deletePost = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.updatePost = catchAsync(async (req, res) => {
+exports.updatePost = catchAsync(async (req, res, next) => {
   const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
   });
+
+  if (!updatedPost) {
+    return next(new AppError('Nie znaleziono takiego posta', 404));
+  }
 
   res.status(200).json({
     status: 'success',
