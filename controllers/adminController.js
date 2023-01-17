@@ -150,7 +150,7 @@ exports.getAdministrators = catchAsync(async (req, res) => {
 exports.getAdminReportsCounters = catchAsync(async (req, res) => {
   const allReports = await Report.countDocuments({ admin: req.params.id });
   const newReports = await Report.countDocuments({
-    $and: [{ admin: req.params.id }, { status: 'new' }],
+    $and: [{ admin: req.params.id }, { status: 'inProgress' }],
   });
   const solvedReports = await Report.countDocuments({
     $and: [{ admin: req.params.id }, { status: 'solved' }],
